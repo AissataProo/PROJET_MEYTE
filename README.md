@@ -12,3 +12,5 @@ Les données sont disponibles sur le site data.gouv.fr au lien suivant :  https:
 ## Objectif
 L'objectif de ce projet est de concevoir un système de reporting automatisé capable de transformer les flux de données bruts de la métropole parisienne en un tableau de bord décisionnel sur Excel et analyse les disparités entre les 55 communes et génère des indicateurs de performance (KPIs) pour piloter le dispatching des vélos mécaniques et électriques.
 # Les formules que vous prévoyez d’utiliser
+# Schema 
+!(![alt text](image.png))
