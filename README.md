@@ -44,4 +44,4 @@ Je prévois d’utiliser :
 * **Gestion des erreurs et qualité des données :** `SI()`, `SIERREUR()` et `ARRONDI()` pour sécuriser et fiabiliser les calculs
 
 # Schema 
-!(![alt text](image.png))
+!(![alt text](Schema.png))
