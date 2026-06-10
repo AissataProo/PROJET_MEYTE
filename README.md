@@ -24,11 +24,14 @@ Ce jeu de données recense les dépenses remboursées associées aux pathologies
 - les dépenses totales ;
 - les dépenses moyennes par patient ;
 - les postes de dépenses ;
-- les effectifs concernés.
+
 ## Objectif
-L'objectif de ce projet est de concevoir un système de reporting automatisé capable mieux comprendre comment les ressources de santé sont consommées selon les pathologies, les territoires et les profils de patients. En croisant les effectifs et les dépenses entre 2020 et 2023, le dashboard permet de mettre en évidence les écarts de coûts entre pathologies, indépendamment du nombre de patients concernés.
+L'objectif de ce projet est de concevoir un système de reporting automatisé capable mieux comprendre comment les ressources de santé sont consommées selon les pathologies, les territoires et les profils de patients. Il combine deux niveaux d’analyse complémentaires :  
+– une vue nationale des dépenses de santé par pathologie (2021–2023),
+– une vue régionale et départementale des effectifs de patients.
+
 L’outil développé permet ainsi d’identifier les pathologies les plus coûteuses, d’observer les disparités régionales et départementales, et de suivre l’évolution des dépenses dans le temps. 
-L'analyse de ces indicateurs permet de mettre en évidence les principaux postes de dépenses, les populations les plus concernées,etc...L
+L'analyse de ces indicateurs permet de mettre en évidence les principaux postes de dépenses, les populations les plus concernées,etc...
 
 ## Les formules que je prévois d’utiliser
 
@@ -36,12 +39,14 @@ Je prévois d’utiliser plusieurs formules afin de structurer, croiser et analy
 
 Je prévois d’utiliser :
 
-* **Formules d’agrégation :** `SOMME()`, `MOYENNE()` pour calculer les dépenses totales et le coût moyen par patient
+* **Formules d’agrégation :** `SOMME()`, pour calculer les dépenses totales
 * **Formules conditionnelles :** `NB.SI()`, `NB.SI.ENS()`, `SOMME.SI()`, `SOMME.SI.ENS()` pour filtrer et agréger les données selon la pathologie, la région, le sexe ou l’année
-* **Recherche et croisement de données :** `RECHERCHEX()` (ou `INDEX/EQUIV`) pour faire correspondre les jeux de données effectifs et dépenses
-* **Analyse dynamique :** `FILTRER()` combinée à INDEX() pour extraire et structurer des sous-ensembles de données selon différents critères (année, pathologie, tranches d'ages)
+* **Analyse dynamique :** `FILTRER()` pour extraire et structurer des sous-ensembles de données selon différents critères (année, pathologie, tranches d'ages, postes de depenses)
 * **Indicateurs de performance :** calcul du coût moyen par patient, des parts de dépenses par pathologie et des évolutions dans le temps
 * **Gestion des erreurs et qualité des données :** `SI()`, `SIERREUR()` et `ARRONDI()` pour sécuriser et fiabiliser les calculs
+
+* **Recherche optimisée :** `RECHERCHEX()` pour des croisements de données sécurisés et rapides.
+* **Visualisation :** `SPARKLINE()` pour intégrer des tendances annuelles visuelles directement dans les cellules.
 
 # Schema 
 !(![alt text](Schema.png))
