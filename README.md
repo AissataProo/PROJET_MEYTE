@@ -44,9 +44,12 @@ Je prévois d’utiliser :
 * **Analyse dynamique :** `FILTRER()` pour extraire et structurer des sous-ensembles de données selon différents critères (année, pathologie, tranches d'ages, postes de depenses)
 * **Indicateurs de performance :** calcul du coût moyen par patient, des parts de dépenses par pathologie et des évolutions dans le temps
 * **Gestion des erreurs et qualité des données :** `SI()`, `SIERREUR()` et `ARRONDI()` pour sécuriser et fiabiliser les calculs
+* * **Recherche optimisée :** `RECHERCHEX()` pour des croisements de données sécurisés et rapides.
+* **Visualisation :** `SPARKLINE()` pour intégrer des tendances annuelles visuelles directement dans les cellules.
 
 * **Recherche optimisée :** `RECHERCHEX()` pour des croisements de données sécurisés et rapides.
 * **Visualisation :** `SPARKLINE()` pour intégrer des tendances annuelles visuelles directement dans les cellules.
 
 # Schema 
 !(![alt text](Schema.png))
+
