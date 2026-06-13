@@ -27,7 +27,7 @@ Ce jeu de données recense les dépenses remboursées associées aux pathologies
 
 ## Objectif
 L'objectif de ce projet est de concevoir un système de reporting automatisé capable mieux comprendre comment les ressources de santé sont consommées selon les pathologies, les territoires et les profils de patients. Il combine deux niveaux d’analyse complémentaires :  
-– une vue nationale des dépenses de santé par pathologie (2021–2023),
+– une vue nationale des dépenses de santé par pathologie (2022–2023),
 – une vue régionale et départementale des effectifs de patients.
 
 L’outil développé permet ainsi d’identifier les pathologies les plus coûteuses, d’observer les disparités régionales et départementales, et de suivre l’évolution des dépenses dans le temps. 
