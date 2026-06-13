@@ -16,7 +16,7 @@ OUTPUT_DASHBOARD = RESULT_DIR / "Dashboard_AMeli.xlsx"
 
 # --- URLs MinIO ---
 URL_EFFECTIFS = "https://minio.lab.sspcloud.fr/aissataa/PROJET_MEYTE/effectifs.csv"
-URL_REGIONS = "https://minio.lab.sspcloud.fr/aissataa/PROJET_MEYTE/LibelleRegions.csv"
+URL_REGIONS = "https://minio.lab.sspcloud.fr/aissataa/PROJET_MEYTE/LibelleRegionDept.csv"
 URL_DEPENSES = "https://minio.lab.sspcloud.fr/aissataa/PROJET_MEYTE/depenses.csv"
 URLS = {
     "effectifs": URL_EFFECTIFS,

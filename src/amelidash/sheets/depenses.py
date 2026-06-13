@@ -4,18 +4,16 @@ from components.filters import add_filter
 
 
 class OngletDepenses:
-
-    def __init__(self, excel_manager, df):
-        self.excel_manager = excel_manager
+    def __init__(self, wb, df):
+        self.wb = wb
         self.df = df
-        self.wb = excel_manager.wb
 
     def create(self):
-        ws = self.excel_manager.create_sheet("Depenses", 1)
+        ws = self.wb.create_sheet("Depenses", 1)
         ws.sheet_view.showGridLines = False
 
-        ws_dep = self.wb["cleanedData_depenses"]
-        sheet_dep = "cleanedData_depenses"
+        ws_dep = self.wb["cleanedData_Depenses"]
+        sheet_dep = "cleanedData_Depenses"
 
         headers = {}
         for idx, cell in enumerate(ws_dep[1], start=1):
@@ -24,7 +22,7 @@ class OngletDepenses:
 
         col_annee = headers.get("annee", 1)
         col_patho = headers.get("patho_niv1", 2)
-        col_poste = headers.get("poste de depense", 5)
+        col_poste = headers.get("poste de dépense", 5)
         col_montant = headers.get("montant", 7)
         col_effectif = headers.get("Effectif", 8)
 
@@ -39,18 +37,14 @@ class OngletDepenses:
             annees_list = [2023]
 
         postes_list = sorted(
-            set(
+            {
                 str(v).strip()
-                for v in self.df["poste de depense"].dropna().unique()
+                for v in self.df["poste de dépense"].dropna().unique()
                 if "total" not in str(v).lower()
-            )
+            }
         )
         if not postes_list:
             postes_list = ["Poste 1"]
-
-        pathos_list = sorted(self.df["patho_niv1"].dropna().unique())
-        if not pathos_list:
-            pathos_list = ["Pathologie 1"]
 
         poste_defaut = postes_list[0]
         annee_defaut = int(annees_list[0])
@@ -71,7 +65,7 @@ class OngletDepenses:
             "D2",
             "Annee",
             [str(int(a)) for a in annees_list],
-            str(int(annee_defaut)),
+            str(annee_defaut),
             COLOR_BLEU,
             COLOR_VERT,
         )
@@ -85,16 +79,12 @@ class OngletDepenses:
             val_patho = row[col_patho - 1]
 
             if val_annee and val_poste and val_patho:
-                if int(val_annee) == annee_defaut:
-                    if str(val_poste).strip() == str(poste_defaut).strip():
-                        label = str(val_patho).strip()
-                        is_total = (
-                            "total" in label.lower()
-                            or "soins courants" in label.lower()
-                        )
-                        if not is_total and label not in seen:
-                            seen.add(label)
-                            patho_rows.append(label)
+                if int(val_annee) == annee_defaut and str(val_poste).strip() == str(poste_defaut).strip():
+                    label = str(val_patho).strip()
+                    is_total = "total" in label.lower() or "soins courants" in label.lower()
+                    if not is_total and label not in seen:
+                        seen.add(label)
+                        patho_rows.append(label)
 
         TABLE_HDR = 4
         TABLE_START = TABLE_HDR + 1
@@ -130,9 +120,7 @@ class OngletDepenses:
             if num_format:
                 cell.number_format = num_format
 
-        for col_i, lbl in enumerate(
-            ["Pathologie", "Effectifs", "Montant (E)", "Cout/patient"], start=1
-        ):
+        for col_i, lbl in enumerate(["Pathologie", "Effectifs", "Montant (E)", "Cout/patient"], start=1):
             make_header_cell(ws.cell(TABLE_HDR, col_i), lbl)
         ws.row_dimensions[TABLE_HDR].height = 22
 

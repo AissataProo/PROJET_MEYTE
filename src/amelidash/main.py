@@ -1,9 +1,11 @@
-"""Point d'entrée principal du Dashboard AMeli (fichier fusionné)."""
+"""Point d'entree principal du Dashboard Ameli (sans ExcelManager)."""
+
+from openpyxl import Workbook
 
 from config import OUTPUT_DASHBOARD, SHEET_CLEANED_DEPENSES, SHEET_CLEANED_EFFECTIFS
-from data import get_cleaned_effectifs, get_cleaned_depenses, load_data , compute_list_lengths
-from sheets.filters import OngletFiltres
 from sheets.graphiques import OngletGraphiques, OngletGraphiquesEffectifs
+from data import get_cleaned_effectifs, get_cleaned_depenses
+from sheets.filters import OngletFiltres
 from sheets.depenses import OngletDepenses
 from sheets.region import OngletRegion
 from sheets.departement import OngletDepartement
@@ -11,7 +13,7 @@ from sheets.postes import OngletPostes
 
 
 def main():
-    print("Dashboard Ameli (Fichier Fusionné)")
+    print("Dashboard Ameli")
     print("=" * 70)
 
     try:
@@ -23,53 +25,46 @@ def main():
         print(f"   Depenses: {len(df_depenses)} lignes")
 
         print(f"\nCreation de {OUTPUT_DASHBOARD.name}...")
-        excel = ExcelManager(OUTPUT_DASHBOARD)
+        wb = Workbook()
+        wb.remove(wb.active)
 
-        print("   - cleanedData_Depenses...")
-        ws_dep = excel.create_sheet(SHEET_CLEANED_DEPENSES, 0)
-        excel.write_dataframe(ws_dep, df_depenses)
-        excel.auto_adjust_columns(ws_dep)
+        print("   - cleanedData_depenses...")
+        ws_dep = wb.create_sheet(SHEET_CLEANED_DEPENSES, 0)
+        for row in [df_depenses.columns.tolist()] + df_depenses.values.tolist():
+            ws_dep.append(row)
 
-        print("   - Filtres (Dépenses)...")
-        filtres_dep = OngletFiltres(excel, df_depenses)
-        filtres_dep.create_depenses()
+        print("   - Filtres...")
+        OngletFiltres(wb, df_depenses).create_depenses()
 
         print("   - Depenses...")
-        depenses = OngletDepenses(excel, df_depenses)
-        depenses.create()
+        OngletDepenses(wb, df_depenses).create()
 
-        print("   - Graphiques (Dépenses)...")
-        graphs_dep = OngletGraphiques(excel, df_depenses)
-        graphs_dep.create()
+        print("   - Graphiques...")
+        OngletGraphiques(wb, df_depenses).create()
 
         print("   - Postes...")
-        postes = OngletPostes(excel, df_depenses)
-        postes.create()
+        OngletPostes(wb, df_depenses)
 
-        print("   - cleanedData_Effectifs...")
-        ws_eff = excel.create_sheet(SHEET_CLEANED_EFFECTIFS, 0)
-        excel.write_dataframe(ws_eff, df_effectifs)
-        excel.auto_adjust_columns(ws_eff)
+        print("   - cleanedData_effectifs...")
+        ws_eff = wb.create_sheet(SHEET_CLEANED_EFFECTIFS, 0)
+        for row in [df_effectifs.columns.tolist()] + df_effectifs.values.tolist():
+            ws_eff.append(row)
 
-        print("   - Filtres (Effectifs)...")
-        filtres_eff = OngletFiltres(excel, df_effectifs)
-        filtres_eff.create_effectifs()
+        print("   - Filtres effectifs...")
+        OngletFiltres(wb, df_effectifs).create_effectifs()
 
         print("   - Region...")
-        region = OngletRegion(excel, df_effectifs)
-        region.create()
+        OngletRegion(wb, df_effectifs).create()
 
         print("   - Departement...")
-        dept = OngletDepartement(excel, df_effectifs)
-        dept.create()
+        OngletDepartement(wb, df_effectifs).create()
 
-        print("   - Graphiques (Effectifs)...")
-        graphs_eff = OngletGraphiquesEffectifs(excel, df_effectifs)
-        graphs_eff.create()
+        print("   - Graphiques effectifs...")
+        OngletGraphiquesEffectifs(wb, df_effectifs).create()
 
-        excel.save()
+        wb.save(OUTPUT_DASHBOARD)
 
-        print(f"\n✓ Fichier créé : {OUTPUT_DASHBOARD}")
+        print(f"\nSucces - Fichier cree : {OUTPUT_DASHBOARD}")
         return 0
 
     except Exception as e:

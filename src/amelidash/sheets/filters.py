@@ -1,20 +1,18 @@
-# """Onglet Filtres : création des filtres déroulants pour dépenses et effectifs."""
+"""Onglet Filtres : création des filtres déroulants pour dépenses et effectifs."""
 
 from components.filters import add_filter
 from config import COULEURS
 
 
 class OngletFiltres:
-
-    def __init__(self, excel_manager, df):
-        self.excel_manager = excel_manager
+    def __init__(self, wb, df):
+        self.wb = wb
         self.df = df
-        # Utiliser les couleurs de config.py
-        self.color_label = COULEURS["accent"]      # "FF4CAF50"
-        self.color_value = COULEURS["secondaire"]  # "FF008080"
+        self.color_label = COULEURS["accent"]
+        self.color_value = COULEURS["secondaire"]
 
     def create_depenses(self):
-        ws = self.excel_manager.create_sheet("Filtres", 0)
+        ws = self.wb.create_sheet("Filtres")
         ws.sheet_state = "hidden"
 
         postes = sorted(self.df["poste de dépense"].dropna().unique())
@@ -41,6 +39,16 @@ class OngletFiltres:
             self.color_value,
             self.color_label,
         )
+
+        add_filter(
+        ws,
+        "F1",
+        "Département",
+        dept_list_top10,
+        dept_list_top10[0] if dept_list_top10 else "",
+        self.color_value,
+        self.color_label,
+    )
         add_filter(
             ws,
             "C1",
@@ -65,23 +73,18 @@ class OngletFiltres:
             ws.column_dimensions[col].width = width
 
     def create_effectifs(self):
-        ws = self.excel_manager.create_sheet("Filtres", 0)
+        ws = self.wb["Filtres"]
         ws.sheet_state = "hidden"
 
-        # Dictionnaire de configuration
         filters = {
             "A1": ("Pathologie", sorted(self.df["patho_niv1"].dropna().unique())),
             "B1": (
                 "Annee",
-                [
-                    str(int(a))
-                    for a in sorted(self.df["annee"].dropna().unique(), reverse=True)
-                ],
+                [str(int(a)) for a in sorted(self.df["annee"].dropna().unique(), reverse=True)],
             ),
-            "C1": ("Région", sorted(self.df["Région"].dropna().unique())),  # avec accent
-            "D1": ("Département", sorted(self.df["Département"].dropna().unique())),  # avec accent
+            "C1": ("Région", sorted(self.df["Région"].dropna().unique())),
+            "D1": ("Département", sorted(self.df["Département"].dropna().unique())),
             "E1": ("Classe d'age", sorted(self.df["Classe d'age"].dropna().unique())),
-            "F1": ("Sexe", sorted(self.df["Sexe"].dropna().unique())),
         }
 
         for cell, (label, values) in filters.items():
@@ -95,6 +98,6 @@ class OngletFiltres:
                 self.color_label,
             )
 
-        widths = {"A": 35, "B": 15, "C": 30, "D": 35, "E": 20, "F": 15}
+        widths = {"A": 35, "B": 15, "C": 30, "D": 35, "E": 20}
         for col, width in widths.items():
             ws.column_dimensions[col].width = width
