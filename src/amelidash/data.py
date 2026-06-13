@@ -1,0 +1,143 @@
+import pandas as pd
+from loguru import logger
+from config import URLS
+
+
+def load_data() -> pd.DataFrame:
+    """Charge le CSV depuis l'URL publique MinIO définie dans la config.
+
+    Returns:
+        DataFrame brut.
+    """
+    logger.info(f"Chargement des données depuis {URLS}")
+    return pd.read_csv(URLS)
+
+
+def get_cleaned_effectifs() -> pd.DataFrame:
+    """Charge, fusionne et nettoie les données d'effectifs."""
+    logger.info("Chargement et nettoyage des effectifs...")
+
+    chunks = []
+    for chunk in pd.read_csv(URLS["effectifs"], sep=";", chunksize=100_000, low_memory=False):
+        filtered = chunk[(chunk["annee"] >= 2022) & (chunk["dept"] != "999")]
+        chunks.append(filtered)
+
+    df = pd.concat(chunks, ignore_index=True)
+
+    df_regions = pd.read_csv(
+        URLS["regions"],
+        sep=";",
+        encoding="latin1",
+        usecols=["departement", "libelle_departement", "libelle_region"],
+    )
+
+    df_regions["departement"] = df_regions["departement"].astype(str).str.zfill(2)
+    df["dept"] = df["dept"].astype(str).str.zfill(2)
+
+    df = pd.merge(df, df_regions, left_on="dept", right_on="departement", how="inner")
+
+    df["patho_niv2"] = df["patho_niv2"].str.replace(r"\s*\(.*\)", "", regex=True).str.strip()
+    df["patho_niv3"] = df["patho_niv3"].str.replace(r"\s*\(.*\)", "", regex=True).str.strip()
+
+    hors_hexa = [
+        "Tout département",
+        "Haute-Corse",
+        "Martinique",
+        "La Réunion",
+        "Guyane",
+        "Mayotte",
+        "Corse-du-Sud",
+        "FRANCE",
+    ]
+    df = df[(~df["libelle_departement"].isin(hors_hexa)) & (df["libelle_region"] != "FRANCE")]
+
+    df = df[df["prev"] > 0]
+    df = df[(df["patho_niv1"] != "0") & (df["patho_niv2"] != "0") & (df["patho_niv3"] != "0")]
+
+    return (
+        df.rename(
+            columns={
+                "libelle_departement": "Département",
+                "libelle_region": "Région",
+                "prev": "Prévalence",
+                "Npop": "Population de référence",
+                "Ntop": "Effectif",
+                "libelle_sexe": "Sexe",
+                "libelle_classe_age": "Classe d'age",
+            }
+        )
+        .drop(
+            columns=[
+                "Code département",
+                "tri",
+                "Niveau prioritaire",
+                "region",
+                "dept",
+                "departement",
+                "cla_age_5",
+                "top",
+                "sexe",
+            ],
+            errors="ignore",
+        )
+        .dropna()
+    )
+
+
+def get_cleaned_depenses() -> pd.DataFrame:
+    """Charge et nettoie les données de dépenses."""
+    logger.info("Chargement et nettoyage des dépenses...")
+
+    chunks = []
+    for chunk in pd.read_csv(URLS["depenses"], sep=";", chunksize=100_000, low_memory=False):
+        filtered = chunk[(chunk["annee"] >= 2022) & (chunk["montant"] > 0)]
+        chunks.append(filtered)
+
+    df = pd.concat(chunks, ignore_index=True)
+
+    df = df.rename(
+        columns={
+            "Ntop": "Effectif",
+            "dep_niv_1": "poste de dépense",
+            "dep_niv_2": "sous poste",
+        }
+    )
+
+    cols_to_drop = ["tri", "Niveau prioritaire", "type_somme", "top"]
+    df = df.drop(columns=cols_to_drop, errors="ignore")
+
+    lignes_a_exclure = ["Total consommants tous régimes", "Soins courants"]
+    df = df[~df["sous poste"].isin(lignes_a_exclure)]
+
+    df = df.drop_duplicates()
+    return df
+
+
+def compute_list_lengths(df_depenses: pd.DataFrame, df_effectifs: pd.DataFrame) -> dict[str, int]:
+    """
+    Calcule le nombre de valeurs uniques par colonne pour les formules Excel.
+    """
+    len_dict = {}
+    pathos = df_depenses.loc[
+        ~df_depenses["patho_niv1"].isin(["Total", "Total consommants tous régimes"]),
+        "patho_niv1",
+    ].dropna().unique()
+    len_dict["len_annee"] = len(df_depenses["annee"].dropna().unique()) + 1
+    len_dict["len_patho_niv1"] = len(pathos) + 1
+    len_dict["len_poste de dépense"] = len(df_depenses["poste de dépense"].dropna().unique()) + 1
+    len_dict["len_sous poste"] = len(df_depenses["sous poste"].dropna().unique()) + 1
+    classes_age = df_effectifs.loc[
+        ~df_effectifs["Classe d'age"].astype(str).str.lower().isin(["tous âges", "tous ages", "total"]),
+        "Classe d'age",
+    ].dropna().unique()
+    pathos_eff = df_effectifs.loc[
+        ~df_effectifs["patho_niv1"].astype(str).str.lower().isin(["total", "total consommants tous régimes", "Soins courants"]),
+        "patho_niv1",
+    ].dropna().unique()
+    len_dict["len_departement_eff"] = len(df_effectifs["Département"].dropna().unique()) + 1
+    len_dict["len_classes_age"] = len(classes_age) + 1
+    len_dict["len_sexe"] = len(df_effectifs["Sexe"].dropna().unique()) + 1
+    len_dict["len_region"] = len(df_effectifs["Région"].dropna().unique()) + 1
+    len_dict["len_patho_effectif"] = len(pathos_eff) + 1
+
+    return len_dict
