@@ -6,6 +6,11 @@ from openpyxl.worksheet.datavalidation import DataValidation
 
 
 class OngletDepartement:
+    """
+    Gère l'onglet 'Département' qui permet l'analyse géographique
+    et temporelle des effectifs par pathologie.
+    """
+
     def __init__(self, wb, df, df_dep=None):
         self.wb = wb
         self.df = df.copy()

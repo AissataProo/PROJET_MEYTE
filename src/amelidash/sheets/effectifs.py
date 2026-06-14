@@ -7,6 +7,11 @@ from components.filterseff import add_filter
 
 
 class OngletEffectifs:
+    """Crée l'onglet Excel des effectifs à partir des données nettoyées.
+
+    Cette classe prépare la feuille de synthèse des effectifs, applique les
+    filtres nécessaires et construit les tableaux ou graphiques associés.
+    """
 
     def __init__(self, wb, df):
         self.wb = wb

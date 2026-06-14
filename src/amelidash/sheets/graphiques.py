@@ -4,14 +4,19 @@
 """
 
 import pandas as pd
-from openpyxl.chart import BarChart, LineChart, Reference
-from openpyxl.chart.label import DataLabelList
+from openpyxl.chart import BarChart, Reference
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
 
 class OngletGraphiques:
+    """
+    Crée l'onglet des graphiques du classeur.
+
+    Cette classe centralise la création des visualisations à partir des
+    données d'effectifs"""
+
     def __init__(self, wb, df, df_dep=None):
         self.wb = wb
         self.df = df.copy()
@@ -44,7 +49,6 @@ class OngletGraphiques:
         else:
             df["Population de référence"] = 0
 
-        # ===================== Sources agrégées (cachées) =====================
         # Source 1 : Région / patho / âge / sexe / annee -> Effectif
         src1 = (
             df.groupby(
@@ -76,7 +80,7 @@ class OngletGraphiques:
         for r in src2.itertuples(index=False):
             ws_s2.append([r[0], r[1], int(r[2]), float(r[3]), float(r[4])])
 
-        # Source 3 : Région / patho / annee / sexe -> Effectif, Population
+        # Source 3 : Région / patho / annee / sexe ; Effectif, Population
         src3 = (
             df.groupby(["Région", "patho_niv1", "annee", "Sexe"], observed=True)[
                 ["Effectif", "Population de référence"]
@@ -92,7 +96,7 @@ class OngletGraphiques:
         for r in src3.itertuples(index=False):
             ws_s3.append([r[0], r[1], int(r[2]), r[3], float(r[4]), float(r[5])])
 
-        # Source 4 : Région / patho / annee / âge -> Effectif, Population
+        # Source 4 : Région / patho / annee / âge ; Effectif, Population
         src4 = (
             df.groupby(
                 ["Région", "patho_niv1", "annee", "Classe d'age"], observed=True
@@ -108,7 +112,7 @@ class OngletGraphiques:
         for r in src4.itertuples(index=False):
             ws_s4.append([r[0], r[1], int(r[2]), r[3], float(r[4]), float(r[5])])
 
-        # Source 5 (dépenses) : patho / annee / poste -> Montant
+        # Source 5 (dépenses) : patho / annee / poste ; Montant
         postes = []
         if self.df_dep is not None and "montant" in self.df_dep.columns:
             dd = self.df_dep.copy()
@@ -160,7 +164,7 @@ class OngletGraphiques:
         patho_def = pathos[0] if pathos else None
         annee_def = int(annees[0]) if len(annees) else None
 
-        # ===================== Top 15 départements (prévalence, défaut) =====================
+        # ===================== Top 15 départements (prévalence) =====================
         sub = df[(df["patho_niv1"] == patho_def) & (df["annee"] == annee_def)]
         dep_def = sub.groupby("Département", observed=True)[
             ["Effectif", "Population de référence"]
@@ -188,14 +192,13 @@ class OngletGraphiques:
         COLOR_ROUGE = "C00000"
         COLOR_ROUGE_CLAIR = "F4A6A6"
 
-        # --- Fond de couleur + couleur d'onglet (plus de titre) ---
         ws.sheet_properties.tabColor = COLOR_ROUGE
         fond = PatternFill("solid", fgColor="FCE9E9")
         for row in range(1, 72):
             for col in range(1, 21):
                 ws.cell(row, col).fill = fond
 
-        # --- Listes en colonnes cachées (évite la limite 255) ---
+        #  Listes en colonnes cachées
         L_PATHO_COL, L_REG_COL = 28, 29  # AB, AC
         for i, p in enumerate(pathos, start=2):
             ws.cell(i, L_PATHO_COL).value = p
@@ -219,7 +222,7 @@ class OngletGraphiques:
         _filtre("A4", "B4", "Région", regions[0] if regions else "")
         _filtre("A5", "B5", "Année", annee_def)
 
-        # Filtre pathologie : nom complet visible (renvoi à la ligne)
+        # Filtre pathologie
         ws["B3"].alignment = Alignment(
             horizontal="center", vertical="center", wrap_text=True
         )
@@ -238,8 +241,7 @@ class OngletGraphiques:
         ws.column_dimensions["A"].width = 16
         ws.column_dimensions["B"].width = 50
 
-        # ============ Tableau : Variation annuelle du nb de patients (I à M) ============
-        annees_asc = sorted(int(a) for a in annees)
+        # Tableau : Variation annuelle du nb de patients
         from openpyxl.styles import Border, Side
 
         bord = Border(*([Side(style="thin", color="CCCCCC")] * 4))
@@ -256,29 +258,8 @@ class OngletGraphiques:
             c.fill = PatternFill("solid", fgColor=COLOR_BLEU)
             c.alignment = Alignment(horizontal="center", vertical="center")
             c.border = bord
-
-        for k, an in enumerate(annees_asc):
-            r = 4 + k
-            ws.cell(r, 9, an).border = bord
-            ws.cell(r, 9).alignment = Alignment(horizontal="center")
-            ws.cell(r, 10).value = (
-                f"=SUMIFS(SourceRegSexe!$E:$E,"
-                f"SourceRegSexe!$A:$A,Graphiques!$B$4,"
-                f"SourceRegSexe!$B:$B,Graphiques!$B$3,"
-                f"SourceRegSexe!$C:$C,I{r})"
-            )
             ws.cell(r, 10).number_format = "#,##0"
             ws.cell(r, 10).border = bord
-            if k == 0:
-                ws.cell(r, 11).value = 0
-                ws.cell(r, 12).value = 0
-            else:
-                ws.cell(r, 11).value = f"=J{r - 1}"
-                ws.cell(r, 12).value = f"=IFERROR((J{r}-K{r})/K{r},0)"
-            ws.cell(r, 11).number_format = "#,##0"
-            ws.cell(r, 11).border = bord
-            ws.cell(r, 12).number_format = "0.00%"
-            ws.cell(r, 12).border = bord
 
         ws.column_dimensions["I"].width = 10
         ws.column_dimensions["J"].width = 14

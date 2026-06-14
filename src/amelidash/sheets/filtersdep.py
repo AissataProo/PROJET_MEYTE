@@ -3,6 +3,13 @@ from config import COULEURS
 
 
 class OngletFiltres:
+    """
+    Crée l'onglet de synthèse des dépenses à partir des données nettoyées.
+
+    L'onglet affiche un total des dépenses, un détail par sous pathologie niv2,
+    une comparaison annuelle et un graphique camembert.
+    """
+
     def __init__(self, wb, df):
         self.wb = wb
         self.df = df

@@ -3,6 +3,13 @@ from config import COULEURS
 
 
 class OngletFiltreseff:
+    """
+    Crée l'onglet des filtres pour les effectifs.
+
+    Cette classe gère les éléments de sélection utilisés pour filtrer
+    les données d'effectifs dans le classeur Excel.
+    """
+
     def __init__(self, wb, df):
         self.wb = wb
         self.df = df

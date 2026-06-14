@@ -16,7 +16,9 @@ def build_workbook(
 ) -> Workbook:
     """
     Assemble le classeur Excel complet en mémoire.
-    Les onglets sont créés dans l'ordre de leur importance pour le dashboard.
+
+    Les onglets sont créés dans un ordre logique pour le dashboard :
+    données nettoyées, filtres, analyses, postes, dépenses, région et département.
     """
     wb = Workbook()
 

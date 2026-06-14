@@ -1,10 +1,15 @@
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
-from openpyxl.chart import PieChart, Reference  # Import nécessaire pour le graphique
+from openpyxl.chart import PieChart, Reference
 
 
 class OngletDepenses:
+    """
+    Génère l'onglet Excel des dépenses avec synthèse par pathologie,
+    comparaison annuelle et graphique camembert.
+    """
+
     def __init__(self, wb, df_depenses):
         self.wb = wb
         self.df_depenses = df_depenses

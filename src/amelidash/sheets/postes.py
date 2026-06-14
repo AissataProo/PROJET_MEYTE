@@ -9,7 +9,33 @@ from config import SHEET_CLEANED_DEPENSES
 
 
 class OngletPostes:
+    """
+    Crée l'onglet de synthèse des postes de dépense.
+
+    Cette classe construit les tableaux de synthèse par pathologie_niv2,
+    la répartition des postes, ainsi qu'un graphique camembert.
+
+    Attributes
+    ----------
+    wb : openpyxl.workbook.workbook.Workbook
+        Classeur Excel de travail.
+    df : pandas.DataFrame
+        DataFrame source utilisé pour récupérer les années et pathologies.
+    sheet_cleaned_dep : str
+        Nom de la feuille nettoyée contenant les dépenses.
+    """
+
     def __init__(self, wb, df):
+        """
+        Initialise l'objet et lance la création de l'onglet.
+
+        Parameters
+        ----------
+        wb : openpyxl.workbook.workbook.Workbook
+            Classeur Excel dans lequel créer l'onglet.
+        df : pandas.DataFrame
+            DataFrame source utilisé pour alimenter les listes et filtres.
+        """
         self.wb = wb
         self.df = df
         self.sheet_cleaned_dep = SHEET_CLEANED_DEPENSES

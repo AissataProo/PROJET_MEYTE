@@ -43,7 +43,7 @@ class OngletAnalysesUnifiees:
         ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
         ws.row_dimensions[1].height = 35
 
-        # --- Filtre Année (liste courte -> en dur, OK) ---
+        # --- Filtre Année
         ws["A3"] = "Année"
         ws["A3"].font = Font(bold=True, color="FFFFFF")
         ws["A3"].fill = PatternFill("solid", fgColor=self.couleur_accent)
@@ -61,7 +61,7 @@ class OngletAnalysesUnifiees:
         ws.column_dimensions["A"].width = 14
         ws.column_dimensions["B"].width = 12
 
-        # ===== Source EFFECTIF agrégée (patho x annee) =====
+        # Source EFFECTIF
         sexes = set(eff["Sexe"].astype(str).unique())
         base_eff = (
             eff[eff["Sexe"].astype(str) == "ENSEMBLE"] if "ENSEMBLE" in sexes else eff
@@ -75,7 +75,6 @@ class OngletAnalysesUnifiees:
             .sum()
             .reset_index()
         )
-        # écrit en colonnes H/I/J de Data_Analyses
         ws_data.cell(1, 8, "patho")
         ws_data.cell(1, 9, "annee")
         ws_data.cell(1, 10, "effectif")
@@ -84,7 +83,7 @@ class OngletAnalysesUnifiees:
             ws_data.cell(i, 9, int(r[1]))
             ws_data.cell(i, 10, float(r[2]))
 
-        # ===== Top 10 pathologies (effectif, année par défaut) =====
+        #  Top 10 pathologies (effectif, 20223)
         top_eff = (
             eff_agg[eff_agg["annee"] == annee_defaut]
             .groupby("patho_niv1")["Effectif"]
@@ -116,7 +115,6 @@ class OngletAnalysesUnifiees:
             chart_eff.series[0].graphicalProperties.solidFill = "006B4F"
         ws.add_chart(chart_eff, "A6")
 
-        # ===== Top 10 pathologies (montant) via cleanedData_Depenses (complet) =====
         cols = self.df_depenses.columns.tolist()
         l_patho = get_column_letter(cols.index("patho_niv1") + 1)
         l_mont = get_column_letter(cols.index("montant") + 1)

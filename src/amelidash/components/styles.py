@@ -1,6 +1,5 @@
 from openpyxl.styles import Font, PatternFill, Border, Side
 
-# 1. Configuration centralisée (Idéalement dans config.py)
 COULEURS = {
     "principal": "FF004A99",
     "secondaire": "FF008080",
@@ -12,7 +11,6 @@ COULEURS = {
     "filtre_bg": "E0E0E0",
 }
 
-# 2. Définition des styles (Réutilisables partout)
 thin = Side(border_style="thin", color="4D4D4D")
 border_thin_all = Border(left=thin, right=thin, top=thin, bottom=thin)
 border_bottom_only = Border(bottom=thin)

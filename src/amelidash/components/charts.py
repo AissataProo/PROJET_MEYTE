@@ -36,7 +36,6 @@ def create_bar_chart(
     chart.y_axis.title = "Nb jeux vendus (en millions)"
     _attach_data(chart, src, data_range, category_range)
 
-    # Appliquer la couleur principale aux barres
     chart.series[0].graphicalProperties.solidFill = COULEURS["principal"][2:]
 
     sheet.add_chart(chart, chart_position)
