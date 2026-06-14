@@ -184,7 +184,6 @@ class OngletGraphiques:
         calcm = self.wb.create_sheet("CalcMontant")
         calcm.sheet_state = "hidden"
 
-        COLOR_VERT = "FF006B4F"
         COLOR_BLEU = "FF4472C4"
         COLOR_ROUGE = "C00000"
         COLOR_ROUGE_CLAIR = "F4A6A6"

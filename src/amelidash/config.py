@@ -76,12 +76,12 @@ COLONNES_EFFECTIFS = {
     "effectif": "Effectif",
 }
 PIE_COLORS = [
-    COULEURS["principal"],  # FF004A99 (bleu foncé)
-    COULEURS["secondaire"],  # FF008080 (bleu turquoise)
-    COULEURS["accent"],  # FF4CAF50 (vert)
-    "FF0070AD",  # bleu moyen
-    "FF6372C4",  # bleu clair
-    "FFA9D480",  # vert clair
+    COULEURS["principal"],
+    COULEURS["secondaire"],
+    COULEURS["accent"],
+    "FF0070AD",
+    "FF6372C4",
+    "FFA9D480",
 ]
 
 # --- Styles de texte ---

@@ -60,33 +60,29 @@ class OngletPostes:
         ws.add_data_validation(dv_a)
         dv_a.add("B2")
 
-        # Total des dépenses de l'année sélectionnée
+        # --- Total des dépenses ---
         ws["A4"] = "Total des dépenses"
+        ws["A4"].font = Font(bold=True)
         ws["B4"] = (
             f"=SUMIFS('{sheet_dep}'!${L_montant}:${L_montant},"
             f"'{sheet_dep}'!${L_annee}:${L_annee},$B$2)"
         )
-        ws["B4"].number_format = "#,##0 €"
-        ws["A4"].font = Font(bold=True)
         ws["B4"].font = Font(bold=True)
+        ws["B4"].number_format = "#,##0 €"
 
-        # --- Tableau 1 : Détail par patho_niv2 en haut ---
+        # --- Détail par patho_niv2 ---
         start_row = 5
         ws[f"A{start_row}"] = "Détails des dépenses par Pathologie (Niv 2)"
         ws.merge_cells(f"A{start_row}:C{start_row}")
         ws.cell(start_row, 1).font = Font(bold=True, color="FFFFFF")
         ws.cell(start_row, 1).fill = PatternFill("solid", fgColor=COLOR_ROUGE)
+        ws.cell(start_row, 1).alignment = Alignment(horizontal="left")
 
         headers_patho = ["Pathologie", "Montant (€)", "%"]
         for i, h in enumerate(headers_patho, 1):
             ws.cell(start_row + 1, i, h).fill = PatternFill("solid", fgColor=COLOR_BLEU)
             ws.cell(start_row + 1, i).font = Font(color="FFFFFF")
             ws.cell(start_row + 1, i).alignment = Alignment(horizontal="center")
-
-        ws["D1"] = (
-            f"=SUMIFS('{sheet_dep}'!${L_montant}:${L_montant},"
-            f"'{sheet_dep}'!${L_annee}:${L_annee},$B$2)"
-        )
 
         for idx, patho in enumerate(pathos_list):
             r = start_row + 2 + idx
@@ -97,75 +93,62 @@ class OngletPostes:
                 f"'{sheet_dep}'!${L_patho2}:${L_patho2},A{r})"
             )
             ws.cell(r, 2).number_format = "#,##0 €"
-            ws.cell(r, 3).value = f"=IF($D$1=0,0,B{r}/$D$1)"
+            ws.cell(r, 3).value = f"=SI($B$4=0;0;B{r}/$B$4)"
             ws.cell(r, 3).number_format = "0.0%"
 
-        # Largeurs du tableau pathologie
-        ws.column_dimensions["A"].width = 52
-        ws.column_dimensions["B"].width = 18
-        ws.column_dimensions["C"].width = 12
-        ws.column_dimensions["D"].width = 10
+        # --- Répartition des postes ---
+        poste_table_row = max(12, start_row + len(pathos_list) + 4)
+        ws[f"A{poste_table_row}"] = "Répartition des postes"
+        ws.merge_cells(f"A{poste_table_row}:C{poste_table_row}")
+        ws.cell(poste_table_row, 1).font = Font(bold=True, color="FFFFFF")
+        ws.cell(poste_table_row, 1).fill = PatternFill("solid", fgColor=COLOR_ROUGE)
+        ws.cell(poste_table_row, 1).alignment = Alignment(horizontal="left")
 
-        # --- Mini tableau postes caché ---
-        poste_title_row = 5
-        poste_col = 8  # H
-
-        ws.cell(poste_title_row, poste_col, "Répartition par Poste")
-        ws.merge_cells(
-            start_row=poste_title_row,
-            start_column=poste_col,
-            end_row=poste_title_row,
-            end_column=poste_col + 1
-        )
-        ws.cell(poste_title_row, poste_col).font = Font(bold=True, color="FFFFFF")
-        ws.cell(poste_title_row, poste_col).fill = PatternFill("solid", fgColor=COLOR_BLEU)
-
-        ws.cell(poste_title_row + 1, poste_col, "Poste")
-        ws.cell(poste_title_row + 1, poste_col + 1, "Montant")
+        ws.cell(poste_table_row + 1, 1, "Poste")
+        ws.cell(poste_table_row + 1, 2, "Montant (€)")
+        ws.cell(poste_table_row + 1, 3, "%")
+        for c in range(1, 4):
+            ws.cell(poste_table_row + 1, c).fill = PatternFill(
+                "solid", fgColor=COLOR_BLEU
+            )
+            ws.cell(poste_table_row + 1, c).font = Font(color="FFFFFF")
+            ws.cell(poste_table_row + 1, c).alignment = Alignment(horizontal="center")
 
         for i, (label, source_val) in enumerate(category_mapping.items()):
-            row = poste_title_row + 2 + i
-            ws.cell(row, poste_col, label)
-            ws.cell(row, poste_col + 1).value = (
+            r = poste_table_row + 2 + i
+            ws.cell(r, 1, label)
+            ws.cell(r, 2).value = (
                 f"=SUMIFS('{sheet_dep}'!${L_montant}:${L_montant},"
                 f"'{sheet_dep}'!${L_annee}:${L_annee},$B$2,"
                 f"'{sheet_dep}'!${L_poste}:${L_poste},\"{source_val}\")"
             )
-            ws.cell(row, poste_col + 1).number_format = "#,##0 €"
+            ws.cell(r, 2).number_format = "#,##0 €"
+            ws.cell(r, 3).value = f"=SI($B$4=0;0;B{r}/$B$4)"
+            ws.cell(r, 3).number_format = "0.0%"
 
-        # Cacher le tableau des postes
-        ws.column_dimensions["H"].hidden = True
-        ws.column_dimensions["I"].hidden = True
-
-        # --- Camembert à droite ---
+        # --- Camembert configuré E15 ---
         pie = PieChart()
         pie.title = "Répartition des dépenses"
+        pie.height = 12.5
+        pie.width = 16.0
 
         data = Reference(
-            ws,
-            min_col=poste_col + 1,
-            min_row=poste_title_row + 2,
-            max_row=poste_title_row + 4
+            ws, min_col=2, min_row=poste_table_row + 1, max_row=poste_table_row + 4
         )
         cats = Reference(
-            ws,
-            min_col=poste_col,
-            min_row=poste_title_row + 2,
-            max_row=poste_title_row + 4
+            ws, min_col=1, min_row=poste_table_row + 2, max_row=poste_table_row + 4
         )
 
-        pie.add_data(data, titles_from_data=False)
+        pie.add_data(data, titles_from_data=True)
         pie.set_categories(cats)
         pie.dataLabels = DataLabelList()
         pie.dataLabels.showPercent = True
         pie.dataLabels.showVal = False
-        pie.legend = None
+        pie.legend.position = "b"
 
-        ws.add_chart(pie, "J5")
+        ws.add_chart(pie, "E15")
 
-        # Largeur de la zone du graphique
-        ws.column_dimensions["J"].width = 3
-
-        # Hauteurs utiles
-        ws.row_dimensions[2].height = 22
-        ws.row_dimensions[start_row].height = 22
+        # --- Largeurs ---
+        ws.column_dimensions["A"].width = 52
+        ws.column_dimensions["B"].width = 18
+        ws.column_dimensions["C"].width = 12

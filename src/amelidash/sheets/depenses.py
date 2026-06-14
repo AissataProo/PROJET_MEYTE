@@ -166,19 +166,23 @@ class OngletDepenses:
                 val_patho = row[col_patho - 1]
 
                 if val_annee and val_poste and val_patho:
+                    # Vérification des valeurs
                     if (
-                        int(val_annee) == annee_defaut
+                        int(val_annee) == int(annee_defaut)
                         and str(val_poste).strip() == str(poste_defaut).strip()
                     ):
                         label = str(val_patho).strip()
+
+                        # Logique d'exclusion
                         exclude = (
                             "total" in label.lower()
                             or "soins courants" in label.lower()
                         )
+
                         if not exclude and label not in seen:
                             seen.add(label)
                             patho_rows.append(label)
-            except:
+            except Exception:
                 pass
 
         ws.merge_cells("A5:D5")
