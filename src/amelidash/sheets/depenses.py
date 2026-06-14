@@ -174,7 +174,6 @@ class OngletDepenses:
             ws[f"C{row}"].fill = couleur
             ws[f"C{row}"].border = border_data
             ws[f"C{row}"].alignment = Alignment(horizontal="right", vertical="center")
-
             # cOÛT/PATIENT
             ws[f"D{row}"] = f"=IF(C{row}=0,0,B{row}/C{row})"
             ws[f"D{row}"].number_format = "#,##0.00 €"
