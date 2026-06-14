@@ -1,75 +1,102 @@
-"""Onglet Analyses Unifiées - 2 Graphiques côte à côte + Filtre Année."""
+"""Onglet Analyses Unifiées - Top 10 Effectifs + Top 10 Montants, filtre Année dynamique."""
 
+import pandas as pd
 from openpyxl.chart import BarChart, Reference
 from openpyxl.styles import Font, PatternFill, Alignment
-from components.filters import add_filter
-from config import COULEURS
+from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.datavalidation import DataValidation
+
+from config import COULEURS, SHEET_CLEANED_DEPENSES
 
 
 class OngletAnalysesUnifiees:
-    """2 Graphiques côte à côte + Filtre Année."""
-
     def __init__(self, wb, df_depenses, df_effectifs):
         self.wb = wb
-        self.df_depenses = df_depenses
-        self.df_effectifs = df_effectifs
+        self.df_depenses = df_depenses.copy()
+        self.df_effectifs = df_effectifs.copy()
         self.couleur_principale = COULEURS["principal"]
         self.couleur_accent = COULEURS["accent"]
 
     def create(self):
+        for nom in ["Analyses", "Data_Analyses"]:
+            if nom in self.wb.sheetnames:
+                self.wb.remove(self.wb[nom])
+
         ws = self.wb.create_sheet("Analyses")
+        ws.sheet_view.showGridLines = False
         ws_data = self.wb.create_sheet("Data_Analyses")
         ws_data.sheet_state = "hidden"
 
-        ws.sheet_view.showGridLines = False
-        ws.sheet_view.zoomScale = 85
+        dep = self.df_depenses
+        eff = self.df_effectifs
+        dep["montant"] = pd.to_numeric(dep["montant"], errors="coerce").fillna(0)
+        eff["Effectif"] = pd.to_numeric(eff["Effectif"], errors="coerce").fillna(0)
 
-        ws.merge_cells("A1:Z1")
-        ws["A1"] = " Analyses Unifiées"
-        ws["A1"].font = Font(bold=True, size=16, color="FFFFFF", name="Calibri")
-        ws["A1"].fill = PatternFill(
-            start_color=self.couleur_principale, fill_type="solid"
-        )
-        ws["A1"].alignment = Alignment(
-            horizontal="center", vertical="center", wrap_text=True
-        )
-        ws.row_dimensions[1].height = 35
-
-        annees = sorted(self.df_depenses["annee"].unique(), reverse=True)
+        annees = sorted(dep["annee"].dropna().unique(), reverse=True)
         annee_defaut = int(annees[0]) if annees else 2023
 
-        add_filter(
-            ws,
-            "B3",
-            "Année",
-            [str(int(a)) for a in annees],
-            str(annee_defaut),
-            self.couleur_accent,
-            self.couleur_principale,
+        # --- Titre ---
+        ws.merge_cells("A1:T1")
+        ws["A1"] = "Analyses unifiées"
+        ws["A1"].font = Font(bold=True, size=16, color="FFFFFF")
+        ws["A1"].fill = PatternFill("solid", fgColor=self.couleur_principale)
+        ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
+        ws.row_dimensions[1].height = 35
+
+        # --- Filtre Année (liste courte -> en dur, OK) ---
+        ws["A3"] = "Année"
+        ws["A3"].font = Font(bold=True, color="FFFFFF")
+        ws["A3"].fill = PatternFill("solid", fgColor=self.couleur_accent)
+        ws["A3"].alignment = Alignment(horizontal="center")
+        ws["B3"] = annee_defaut
+        ws["B3"].font = Font(bold=True)
+        ws["B3"].alignment = Alignment(horizontal="center")
+        dv = DataValidation(
+            type="list",
+            formula1=f'"{",".join(str(int(a)) for a in annees)}"',
+            allow_blank=False,
         )
+        ws.add_data_validation(dv)
+        dv.add("B3")
+        ws.column_dimensions["A"].width = 14
+        ws.column_dimensions["B"].width = 12
 
-        df_dep_filtered = self.df_depenses[self.df_depenses["annee"] == annee_defaut]
-        df_eff_filtered = self.df_effectifs[self.df_effectifs["annee"] == annee_defaut]
+        # ===== Source EFFECTIF agrégée (patho x annee) =====
+        sexes = set(eff["Sexe"].astype(str).unique())
+        base_eff = eff[eff["Sexe"].astype(str) == "ENSEMBLE"] if "ENSEMBLE" in sexes else eff
+        base_eff = base_eff[
+            ~base_eff["Classe d'age"].astype(str).str.lower().str.contains("tous")
+            & ~base_eff["patho_niv1"].astype(str).str.lower().str.contains("total")
+        ]
+        eff_agg = (
+            base_eff.groupby(["patho_niv1", "annee"], observed=True)["Effectif"]
+            .sum()
+            .reset_index()
+        )
+        # écrit en colonnes H/I/J de Data_Analyses
+        ws_data.cell(1, 8, "patho")
+        ws_data.cell(1, 9, "annee")
+        ws_data.cell(1, 10, "effectif")
+        for i, r in enumerate(eff_agg.itertuples(index=False), start=2):
+            ws_data.cell(i, 8, str(r[0]))
+            ws_data.cell(i, 9, int(r[1]))
+            ws_data.cell(i, 10, float(r[2]))
 
-        top_effectifs = (
-            df_eff_filtered[
-                (
-                    ~df_eff_filtered["patho_niv1"].str.contains(
-                        "total", case=False, na=False
-                    )
-                )
-                & (df_eff_filtered["patho_niv1"].notna())
-            ]
+        # ===== Top 10 pathologies (effectif, année par défaut) =====
+        top_eff = (
+            eff_agg[eff_agg["annee"] == annee_defaut]
             .groupby("patho_niv1")["Effectif"]
             .sum()
             .nlargest(10)
             .sort_values()
         )
-
-        row = 1
-        for idx, (patho, effectif) in enumerate(top_effectifs.items(), 1):
-            ws_data.cell(row + idx, 1).value = patho
-            ws_data.cell(row + idx, 2).value = effectif
+        for i, patho in enumerate(top_eff.index, start=2):
+            ws_data.cell(i, 1, str(patho))
+            ws_data.cell(i, 2).value = (
+                f"=SUMIFS($J:$J,$H:$H,A{i},$I:$I,Analyses!$B$3)"
+            )
+            ws_data.cell(i, 2).number_format = "#,##0"
+        n_eff = len(top_eff)
 
         chart_eff = BarChart()
         chart_eff.type = "bar"
@@ -77,36 +104,44 @@ class OngletAnalysesUnifiees:
         chart_eff.title = "Top 10 Pathologies (Effectifs)"
         chart_eff.height = 16
         chart_eff.width = 20
-
-        data_eff = Reference(
-            ws_data, min_col=2, min_row=1, max_row=len(top_effectifs) + 1
+        chart_eff.legend = None
+        chart_eff.add_data(
+            Reference(ws_data, min_col=2, min_row=1, max_row=n_eff + 1),
+            titles_from_data=True,
         )
-        cats_eff = Reference(
-            ws_data, min_col=1, min_row=2, max_row=len(top_effectifs) + 1
+        chart_eff.set_categories(
+            Reference(ws_data, min_col=1, min_row=2, max_row=n_eff + 1)
         )
-        chart_eff.add_data(data_eff, titles_from_data=True)
-        chart_eff.set_categories(cats_eff)
+        if chart_eff.series:
+            chart_eff.series[0].graphicalProperties.solidFill = "006B4F"
         ws.add_chart(chart_eff, "A6")
 
-        top_montants = (
-            df_dep_filtered[
-                (
-                    ~df_dep_filtered["patho_niv1"].str.contains(
-                        "total", case=False, na=False
-                    )
-                )
-                & (df_dep_filtered["patho_niv1"].notna())
+        # ===== Top 10 pathologies (montant) via cleanedData_Depenses (complet) =====
+        cols = self.df_depenses.columns.tolist()
+        l_patho = get_column_letter(cols.index("patho_niv1") + 1)
+        l_mont = get_column_letter(cols.index("montant") + 1)
+        l_annee = get_column_letter(cols.index("annee") + 1)
+        sd = SHEET_CLEANED_DEPENSES
+
+        top_mont = (
+            dep[
+                (dep["annee"] == annee_defaut)
+                & (~dep["patho_niv1"].astype(str).str.lower().str.contains("total"))
             ]
             .groupby("patho_niv1")["montant"]
             .sum()
             .nlargest(10)
             .sort_values()
         )
-
-        row = 1
-        for idx, (patho, montant) in enumerate(top_montants.items(), 1):
-            ws_data.cell(row + idx, 4).value = patho
-            ws_data.cell(row + idx, 5).value = montant
+        for i, patho in enumerate(top_mont.index, start=2):
+            ws_data.cell(i, 4, str(patho))
+            ws_data.cell(i, 5).value = (
+                f"=SUMIFS('{sd}'!{l_mont}:{l_mont},"
+                f"'{sd}'!{l_patho}:{l_patho},D{i},"
+                f"'{sd}'!{l_annee}:{l_annee},Analyses!$B$3)"
+            )
+            ws_data.cell(i, 5).number_format = "#,##0"
+        n_mont = len(top_mont)
 
         chart_mont = BarChart()
         chart_mont.type = "bar"
@@ -114,13 +149,14 @@ class OngletAnalysesUnifiees:
         chart_mont.title = "Top 10 Pathologies (Montant)"
         chart_mont.height = 16
         chart_mont.width = 20
-
-        data_mont = Reference(
-            ws_data, min_col=5, min_row=1, max_row=len(top_montants) + 1
+        chart_mont.legend = None
+        chart_mont.add_data(
+            Reference(ws_data, min_col=5, min_row=1, max_row=n_mont + 1),
+            titles_from_data=True,
         )
-        cats_mont = Reference(
-            ws_data, min_col=4, min_row=2, max_row=len(top_montants) + 1
+        chart_mont.set_categories(
+            Reference(ws_data, min_col=4, min_row=2, max_row=n_mont + 1)
         )
-        chart_mont.add_data(data_mont, titles_from_data=True)
-        chart_mont.set_categories(cats_mont)
+        if chart_mont.series:
+            chart_mont.series[0].graphicalProperties.solidFill = "4472C4"
         ws.add_chart(chart_mont, "O6")

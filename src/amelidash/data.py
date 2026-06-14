@@ -57,9 +57,9 @@ def get_cleaned_effectifs() -> pd.DataFrame:
     df = pd.concat(chunks, ignore_index=True)
 
     sexe_map = {1: "HOMME", 2: "FEMME"}
-    df["sexe"] = df["sexe"].map(sexe_map).fillna("ENSEMBLE").astype("category")
+    df = df[df["sexe"].isin([1, 2])].copy()
+    df["sexe"] = df["sexe"].map(sexe_map).astype("category")
     logger.info(f"Sexe converti: {df['sexe'].value_counts().to_dict()}")
-
     df_regions = pd.read_csv(
         URLS["Régions"],
         sep=";",
@@ -86,6 +86,7 @@ def get_cleaned_effectifs() -> pd.DataFrame:
 
     hors_hexa = {
         "Tout département",
+        "Guadeloupe",
         "Haute-Corse",
         "Martinique",
         "La Réunion",
