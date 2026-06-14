@@ -2,6 +2,21 @@ import pandas as pd
 from loguru import logger
 from config import URLS
 
+"""Charge les données brutes (effectifs et dépenses) depuis les URLs MinIO,
+applique les filtres et nettoyages nécessaires, harmonise les libellés
+(régions, départements, classes d’âge, pathologies), convertit les types,
+exclut les valeurs hors périmètre et agrège les indicateurs.
+
+Fournit également :
+- une fonction de chargement générique du CSV public ;
+- un pipeline complet de nettoyage pour les effectifs (fusion régions, mapping sexe,
+  filtrage hexagonal, regroupements, renommages, typage) ;
+- un pipeline de nettoyage pour les dépenses (filtres, renommages, exclusions,
+  suppression des doublons, typage) ;
+- une fonction utilitaire calculant les tailles des listes utiles aux filtres Excel.
+
+Retourne des DataFrames prêts à alimenter la génération du classeur Excel."""
+
 
 def load_data() -> pd.DataFrame:
     """Charge le CSV depuis l'URL publique MinIO définie dans la config."""

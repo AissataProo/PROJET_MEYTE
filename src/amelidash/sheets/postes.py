@@ -9,20 +9,17 @@ from config import SHEET_CLEANED_DEPENSES
 
 
 class OngletPostes:
-    """
-    Crée l'onglet de synthèse des postes de dépense.
+    """Construit l’onglet *Postes*, dédié à l’analyse des dépenses par poste et par
+    pathologie (niveau 2). Cette classe :
 
-    Cette classe construit les tableaux de synthèse par pathologie_niv2,
-    la répartition des postes, ainsi qu'un graphique camembert.
-
-    Attributes
-    ----------
-    wb : openpyxl.workbook.workbook.Workbook
-        Classeur Excel de travail.
-    df : pandas.DataFrame
-        DataFrame source utilisé pour récupérer les années et pathologies.
-    sheet_cleaned_dep : str
-        Nom de la feuille nettoyée contenant les dépenses.
+    - crée l’onglet et configure le filtre d’année ;
+    - calcule le total des dépenses pour l’année sélectionnée ;
+    - génère le tableau détaillé des montants par *patho_niv2* avec pourcentage ;
+    - produit la répartition des postes de dépense (Soins de ville, Hospitalisations,
+      Prestations en espèces) ;
+    - insère un graphique camembert illustrant la structure des dépenses ;
+    - applique la mise en forme, les bordures, largeurs de colonnes et validations
+      nécessaires pour un rendu clair et professionnel.
     """
 
     def __init__(self, wb, df):
@@ -42,6 +39,9 @@ class OngletPostes:
         self.create()
 
     def create(self):
+        for nom in ["Postes", "Postes1"]:
+            if nom in self.wb.sheetnames:
+                del self.wb[nom]
         ws = self.wb.create_sheet("Postes")
         ws.sheet_view.showGridLines = False
 
@@ -74,6 +74,12 @@ class OngletPostes:
         COLOR_ROUGE = "C00000"
         COLOR_BLEU = "4472C4"
         bord_d = Border(*([Side(style="thin", color="CCCCCC")] * 4))
+        # --- TITRE DE L'ONGLET ---
+        ws.merge_cells("A1:C1")
+        ws["A1"] = "Synthèse des postes de dépense"
+        ws["A1"].font = Font(bold=True, size=14, color="FFFFFF")
+        ws["A1"].fill = PatternFill("solid", fgColor=COLOR_ROUGE)
+        ws["A1"].alignment = Alignment(horizontal="center")
 
         # --- Filtre Année ---
         ws["A2"] = "Année :"
@@ -119,7 +125,7 @@ class OngletPostes:
                 f"'{sheet_dep}'!${L_patho2}:${L_patho2},A{r})"
             )
             ws.cell(r, 2).number_format = "#,##0 €"
-            ws.cell(r, 3).value = f"=SI($B$4=0;0;B{r}/$B$4)"
+            ws.cell(r, 3).value = f"=IF($B$4=0,0,B{r}/$B$4)"
             ws.cell(r, 3).number_format = "0.0%"
 
         # --- Répartition des postes ---
@@ -149,7 +155,7 @@ class OngletPostes:
                 f"'{sheet_dep}'!${L_poste}:${L_poste},\"{source_val}\")"
             )
             ws.cell(r, 2).number_format = "#,##0 €"
-            ws.cell(r, 3).value = f"=SI($B$4=0;0;B{r}/$B$4)"
+            ws.cell(r, 3).value = f"=IF($B$4=0,0,B{r}/$B$4)"
             ws.cell(r, 3).number_format = "0.0%"
 
         # --- Camembert configuré E15 ---

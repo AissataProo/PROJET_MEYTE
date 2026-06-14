@@ -4,13 +4,34 @@ from config import OUTPUT_DASHBOARD, SHEET_CLEANED_DEPENSES, SHEET_CLEANED_EFFEC
 from data import get_cleaned_effectifs, get_cleaned_depenses
 from sheets.filtersdep import OngletFiltres
 from sheets.filterseff import OngletFiltreseff
-from sheets.PathobySexe import OngletSexePatho
 from sheets.graphiques import OngletGraphiques
 from sheets.depenses import OngletDepenses
-from sheets.region import OngletRegion
 from sheets.departement import OngletDepartement
 from sheets.postes import OngletPostes
 from sheets.Analyse import OngletAnalysesUnifiees
+
+"""Point d’entrée du script générant le dashboard Excel complet.
+
+Ce module :
+
+- charge et nettoie les données d’effectifs et de dépenses ;
+- agrège les effectifs (suppression du niveau patho_niv2) pour optimiser l’écriture Excel ;
+- écrit les données nettoyées dans les onglets cleanedData ;
+- génère successivement tous les onglets du dashboard :
+    • filtres dépenses  
+    • filtres effectifs  
+    • analyses dépenses  
+    • graphiques effectifs  
+    • postes de dépense  
+    • département  
+    • analyses unifiées  
+- sauvegarde enfin le fichier Excel final.
+
+Fournit également deux utilitaires :
+- `write_df_to_sheet` : écrit un DataFrame en remplaçant tous les manquants par des cellules vides ;
+- `reduce_effectifs` : agrège les effectifs au niveau patho_niv1 pour alléger les données.
+
+Le script peut être exécuté directement pour produire le dashboard."""
 
 
 def write_df_to_sheet(ws, df):
@@ -94,14 +115,8 @@ def main():
         print("   - Postes...")
         OngletPostes(wb, df_depenses).create()
 
-        print("   - Region...")
-        OngletRegion(wb, df_eff_reduit).create()
-
         print("   - Departement...")
         OngletDepartement(wb, df_eff_reduit).create()
-
-        print("   - Sexe et Pathologie...")
-        OngletSexePatho(wb, df_eff_reduit).create()
 
         print("   - Analyses unifiees...")
         OngletAnalysesUnifiees(wb, df_depenses, df_eff_reduit).create()

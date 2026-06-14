@@ -5,10 +5,9 @@ from openpyxl.chart import PieChart, Reference
 
 
 class OngletDepenses:
-    """
-    Génère l'onglet Excel des dépenses avec synthèse par pathologie,
-    comparaison annuelle et graphique camembert.
-    """
+    """Génère l’onglet Excel dédié aux dépenses : agrégation par pathologie,
+    analyse comparative entre années et création d’un graphique en camembert
+    pour visualiser la répartition des montants."""
 
     def __init__(self, wb, df_depenses):
         self.wb = wb
@@ -225,21 +224,22 @@ class OngletDepenses:
                 f"'{sheet_raw}'!${col_poste_letter}:${col_poste_letter},B$3,"
                 f"'{sheet_raw}'!${col_annee_letter}:${col_annee_letter},E$3),0)"
             )
-            style_data_cell(ws.cell(r, 3), idx, num_format="#,##0", align="right")
+            style_data_cell(ws.cell(r, 3), idx, num_format="#,##0 €", align="right")
 
             ws.cell(r, 4).value = f"=IFERROR(C{r}/B{r},0)"
-            style_data_cell(ws.cell(r, 4), idx, num_format="#,##0.00", align="right")
+            style_data_cell(ws.cell(r, 4), idx, num_format="#,##0.00 €", align="right")
 
             ws.row_dimensions[r].height = 18
 
         TABLE1_END = TABLE1_START + len(patho_rows) - 1 if patho_rows else TABLE1_START
 
-        # --- AJOUT DU GRAPHIQUE PIE ---
+        # --- AJOUT DU GRAPHIQUE PIE (agrandi, sans légende) ---
         if patho_rows:
             pie = PieChart()
             pie.title = "Coût/Patient par Pathologie"
-            pie.height = 10
-            pie.width = 12
+            pie.height = 16
+            pie.width = 24
+            pie.legend = None  # enlève la légende (mets une vraie légende en commentant cette ligne)
             # Données : Colonne 4 (Coût/patient)
             data_pie = Reference(ws, min_col=4, min_row=TABLE1_HDR, max_row=TABLE1_END)
             # Catégories : Colonne 1 (Pathologie)
@@ -282,7 +282,7 @@ class OngletDepenses:
                 f"'{sheet_raw}'!${col_poste_letter}:${col_poste_letter},B$3,"
                 f"'{sheet_raw}'!${col_annee_letter}:${col_annee_letter},{annee_n1}),0)"
             )
-            style_data_cell(ws.cell(r, 2), idx, num_format="#,##0", align="right")
+            style_data_cell(ws.cell(r, 2), idx, num_format="#,##0 €", align="right")
 
             ws.cell(r, 3).value = (
                 f"=IFERROR(SUMIFS('{sheet_raw}'!${col_montant_letter}:${col_montant_letter},"
@@ -290,10 +290,10 @@ class OngletDepenses:
                 f"'{sheet_raw}'!${col_poste_letter}:${col_poste_letter},B$3,"
                 f"'{sheet_raw}'!${col_annee_letter}:${col_annee_letter},{annee_n}),0)"
             )
-            style_data_cell(ws.cell(r, 3), idx, num_format="#,##0", align="right")
+            style_data_cell(ws.cell(r, 3), idx, num_format="#,##0 €", align="right")
 
             ws.cell(r, 4).value = f"=C{r}-B{r}"
-            style_data_cell(ws.cell(r, 4), idx, num_format="#,##0", align="right")
+            style_data_cell(ws.cell(r, 4), idx, num_format="#,##0 €", align="right")
 
             ws.cell(r, 5).value = f"=IFERROR((C{r}-B{r})/B{r},0)"
             style_data_cell(ws.cell(r, 5), idx, num_format="0.00%", align="right")

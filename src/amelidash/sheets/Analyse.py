@@ -1,15 +1,20 @@
-"""Onglet Analyses Unifiées - Top 10 Effectifs + Top 10 Montants, filtre Année dynamique."""
-
 import pandas as pd
 from openpyxl.chart import BarChart, Reference
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
-
 from config import COULEURS, SHEET_CLEANED_DEPENSES
 
 
 class OngletAnalysesUnifiees:
+    """Génère l’onglet *Analyses* et l’onglet caché *Data_Analyses* :
+    - crée un filtre d’année dynamique ;
+    - calcule les Top 10 pathologies en **effectifs** et en **montants** ;
+    - alimente la feuille cachée avec les données agrégées nécessaires ;
+    - construit deux graphiques en barres basés sur des formules `SUMIFS` dépendant de l’année sélectionnée ;
+    - applique la mise en forme (titres, couleurs, alignements) et insère les graphiques dans l’onglet principal.
+    """
+
     def __init__(self, wb, df_depenses, df_effectifs):
         self.wb = wb
         self.df_depenses = df_depenses.copy()
@@ -83,10 +88,10 @@ class OngletAnalysesUnifiees:
             ws_data.cell(i, 9, int(r[1]))
             ws_data.cell(i, 10, float(r[2]))
 
-        #  Top 10 pathologies (effectif, 20223)
+        #  Top 10 pathologies (effectif, annee par défaut)
         top_eff = (
             eff_agg[eff_agg["annee"] == annee_defaut]
-            .groupby("patho_niv1")["Effectif"]
+            .groupby("patho_niv1", observed=True)["Effectif"]
             .sum()
             .nlargest(10)
             .sort_values()
@@ -111,6 +116,10 @@ class OngletAnalysesUnifiees:
         chart_eff.set_categories(
             Reference(ws_data, min_col=1, min_row=2, max_row=n_eff + 1)
         )
+        chart_eff.x_axis.title = "Pathologie"
+        chart_eff.y_axis.title = "Effectif"
+        chart_eff.x_axis.delete = False
+        chart_eff.y_axis.delete = False
         if chart_eff.series:
             chart_eff.series[0].graphicalProperties.solidFill = "006B4F"
         ws.add_chart(chart_eff, "A6")
@@ -126,7 +135,7 @@ class OngletAnalysesUnifiees:
                 (dep["annee"] == annee_defaut)
                 & (~dep["patho_niv1"].astype(str).str.lower().str.contains("total"))
             ]
-            .groupby("patho_niv1")["montant"]
+            .groupby("patho_niv1", observed=True)["montant"]
             .sum()
             .nlargest(10)
             .sort_values()
@@ -155,6 +164,10 @@ class OngletAnalysesUnifiees:
         chart_mont.set_categories(
             Reference(ws_data, min_col=4, min_row=2, max_row=n_mont + 1)
         )
+        chart_mont.x_axis.title = "Pathologie"
+        chart_mont.y_axis.title = "Montant (€)"
+        chart_mont.x_axis.delete = False
+        chart_mont.y_axis.delete = False
         if chart_mont.series:
             chart_mont.series[0].graphicalProperties.solidFill = "4472C4"
         ws.add_chart(chart_mont, "O6")

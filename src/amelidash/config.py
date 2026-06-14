@@ -12,7 +12,7 @@ DATA_EFFECTIFS = DATA_DIR / "data_ameli_effectifs.csv"
 # # --- Fichiers de sortie ---
 # OUTPUT_DEP = RESULT_DIR / "Dashboard_Depenses.xlsx"
 # OUTPUT_EFF = RESULT_DIR / "Dashboard_Effectifs.xlsx"
-OUTPUT_DASHBOARD = RESULT_DIR / "Dashboard_AMeli.xlsx"
+OUTPUT_DASHBOARD = RESULT_DIR / "Dashboard_Santé.xlsx"
 
 # --- URLs MinIO ---
 URL_EFFECTIFS = "https://minio.lab.sspcloud.fr/aissataa/PROJET_MEYTE/effectifs.csv"

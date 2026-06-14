@@ -7,15 +7,26 @@ import pandas as pd
 from openpyxl.chart import BarChart, Reference
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
+from openpyxl.styles import Border, Side
 from openpyxl.worksheet.datavalidation import DataValidation
 
 
 class OngletGraphiques:
-    """
-    Crée l'onglet des graphiques du classeur.
+    """Crée l’onglet *Graphiques* du classeur et toutes les feuilles de calcul
+    intermédiaires nécessaires. Cette classe :
 
-    Cette classe centralise la création des visualisations à partir des
-    données d'effectifs"""
+    - prépare les sources agrégées (région, département, sexe, âge, dépenses) ;
+    - génère les listes de filtres (pathologie, région, année, sexe, âge) ;
+    - construit les matrices de calcul pour les visualisations ;
+    - produit les graphiques suivants :
+        • Effectif par sexe × classe d’âge (avec filtres pathologie + région + année)
+        • Top 15 des départements selon le taux de prévalence
+        • Prévalence par région (hommes vs femmes)
+        • Prévalence par classe d’âge
+        • Montants par poste de dépense (si données disponibles) ;
+    - applique la mise en forme, les validations de données et insère les graphiques
+    dans l’onglet principal.
+    """
 
     def __init__(self, wb, df, df_dep=None):
         self.wb = wb
@@ -49,7 +60,7 @@ class OngletGraphiques:
         else:
             df["Population de référence"] = 0
 
-        # Source 1 : Région / patho / âge / sexe / annee -> Effectif
+        # Source 1 : Région / patho / âge / sexe / annee = Effectif
         src1 = (
             df.groupby(
                 ["Région", "patho_niv1", "Classe d'age", "Sexe", "annee"],
@@ -66,7 +77,7 @@ class OngletGraphiques:
         for r in src1.itertuples(index=False):
             ws_s1.append([r[0], r[1], r[2], r[3], int(r[4]), float(r[5])])
 
-        # Source 2 : Département / patho / annee -> Effectif, Population
+        # Source 2 : Département / patho / annee , Effectif, Population
         src2 = (
             df.groupby(["Département", "patho_niv1", "annee"], observed=True)[
                 ["Effectif", "Population de référence"]
@@ -241,9 +252,8 @@ class OngletGraphiques:
         ws.column_dimensions["A"].width = 16
         ws.column_dimensions["B"].width = 50
 
-        # Tableau : Variation annuelle du nb de patients
-        from openpyxl.styles import Border, Side
-
+        # ============ Tableau : Variation annuelle du nb de patients ============
+        annees_asc = sorted(int(a) for a in annees)
         bord = Border(*([Side(style="thin", color="CCCCCC")] * 4))
         ws.merge_cells("I2:M2")
         ws["I2"] = "Variation annuelle du nombre de patients"
@@ -258,8 +268,29 @@ class OngletGraphiques:
             c.fill = PatternFill("solid", fgColor=COLOR_BLEU)
             c.alignment = Alignment(horizontal="center", vertical="center")
             c.border = bord
+
+        for k, an in enumerate(annees_asc):
+            r = 4 + k
+            ws.cell(r, 9, an).border = bord
+            ws.cell(r, 9).alignment = Alignment(horizontal="center")
+            ws.cell(r, 10).value = (
+                f"=SUMIFS(SourceRegSexe!$E:$E,"
+                f"SourceRegSexe!$A:$A,Graphiques!$B$4,"
+                f"SourceRegSexe!$B:$B,Graphiques!$B$3,"
+                f"SourceRegSexe!$C:$C,I{r})"
+            )
             ws.cell(r, 10).number_format = "#,##0"
             ws.cell(r, 10).border = bord
+            if k == 0:
+                ws.cell(r, 11).value = 0
+                ws.cell(r, 12).value = 0
+            else:
+                ws.cell(r, 11).value = f"=J{r - 1}"
+                ws.cell(r, 12).value = f"=IFERROR((J{r}-K{r})/K{r},0)"
+            ws.cell(r, 11).number_format = "#,##0"
+            ws.cell(r, 11).border = bord
+            ws.cell(r, 12).number_format = "0.00%"
+            ws.cell(r, 12).border = bord
 
         ws.column_dimensions["I"].width = 10
         ws.column_dimensions["J"].width = 14
