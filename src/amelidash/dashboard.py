@@ -9,7 +9,9 @@ from sheets.departement import OngletDepartement
 from sheets.filtres import OngletFiltres
 
 
-def build_workbook(df_dep: pd.DataFrame, df_eff: pd.DataFrame, len_dict: dict[str, int]) -> Workbook:
+def build_workbook(
+    df_dep: pd.DataFrame, df_eff: pd.DataFrame, len_dict: dict[str, int]
+) -> Workbook:
     """
     Assemble le classeur Excel complet en mémoire.
     Les onglets sont créés dans l'ordre de leur importance pour le dashboard.

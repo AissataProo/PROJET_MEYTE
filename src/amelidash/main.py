@@ -1,15 +1,16 @@
-"""Point d'entree principal du Dashboard Ameli (sans ExcelManager)."""
+"""Point d'entree principal du Dashboard Ameli."""
 
 from openpyxl import Workbook
-
 from config import OUTPUT_DASHBOARD, SHEET_CLEANED_DEPENSES, SHEET_CLEANED_EFFECTIFS
-from sheets.graphiques import OngletGraphiques, OngletGraphiquesEffectifs
 from data import get_cleaned_effectifs, get_cleaned_depenses
 from sheets.filters import OngletFiltres
+from sheets.PathobySexe import OngletSexePatho
+from sheets.graphiques import OngletGraphiques
 from sheets.depenses import OngletDepenses
 from sheets.region import OngletRegion
 from sheets.departement import OngletDepartement
 from sheets.postes import OngletPostes
+from sheets.Analyse import OngletAnalysesUnifiees
 
 
 def main():
@@ -21,34 +22,37 @@ def main():
         df_effectifs = get_cleaned_effectifs()
         df_depenses = get_cleaned_depenses()
 
-        print(f"   Effectifs: {len(df_effectifs)} lignes")
+        print(f"   Effectifs: {len(df_effectifs)} lignes (total)")
         print(f"   Depenses: {len(df_depenses)} lignes")
 
         print(f"\nCreation de {OUTPUT_DASHBOARD.name}...")
         wb = Workbook()
         wb.remove(wb.active)
 
+        # ✅ cleanedData_Depenses (4270 lignes = OK, garder tous)
         print("   - cleanedData_depenses...")
         ws_dep = wb.create_sheet(SHEET_CLEANED_DEPENSES, 0)
         for row in [df_depenses.columns.tolist()] + df_depenses.values.tolist():
             ws_dep.append(row)
 
-        print("   - Filtres...")
+        # ✅ cleanedData_Effectifs (LIMITER à 5000 lignes pour taille)
+        print("   - cleanedData_effectifs (5000 lignes max)...")
+        ws_eff = wb.create_sheet(SHEET_CLEANED_EFFECTIFS, 1)
+        df_eff_limited = df_effectifs.head(5000)  # 🔑 LIMITER ICI
+        for row in [df_eff_limited.columns.tolist()] + df_eff_limited.values.tolist():
+            ws_eff.append(row)
+
+        print("   - Filtres depenses...")
         OngletFiltres(wb, df_depenses).create_depenses()
 
         print("   - Depenses...")
         OngletDepenses(wb, df_depenses).create()
 
-        print("   - Graphiques...")
+        print("   - Graphiques depenses...")
         OngletGraphiques(wb, df_depenses).create()
 
         print("   - Postes...")
         OngletPostes(wb, df_depenses)
-
-        print("   - cleanedData_effectifs...")
-        ws_eff = wb.create_sheet(SHEET_CLEANED_EFFECTIFS, 0)
-        for row in [df_effectifs.columns.tolist()] + df_effectifs.values.tolist():
-            ws_eff.append(row)
 
         print("   - Filtres effectifs...")
         OngletFiltres(wb, df_effectifs).create_effectifs()
@@ -59,8 +63,11 @@ def main():
         print("   - Departement...")
         OngletDepartement(wb, df_effectifs).create()
 
-        print("   - Graphiques effectifs...")
-        OngletGraphiquesEffectifs(wb, df_effectifs).create()
+        print("   - Sexe et Pathologie...")
+        OngletSexePatho(wb, df_effectifs).create()
+
+        print("   - Analyses unifiees...")
+        OngletAnalysesUnifiees(wb, df_depenses, df_effectifs).create()
 
         wb.save(OUTPUT_DASHBOARD)
 

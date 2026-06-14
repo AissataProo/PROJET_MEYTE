@@ -16,7 +16,9 @@ OUTPUT_DASHBOARD = RESULT_DIR / "Dashboard_AMeli.xlsx"
 
 # --- URLs MinIO ---
 URL_EFFECTIFS = "https://minio.lab.sspcloud.fr/aissataa/PROJET_MEYTE/effectifs.csv"
-URL_REGIONS = "https://minio.lab.sspcloud.fr/aissataa/PROJET_MEYTE/LibelleRegionDept.csv"
+URL_REGIONS = (
+    "https://minio.lab.sspcloud.fr/aissataa/PROJET_MEYTE/LibelleRegionDept.csv"
+)
 URL_DEPENSES = "https://minio.lab.sspcloud.fr/aissataa/PROJET_MEYTE/depenses.csv"
 URLS = {
     "effectifs": URL_EFFECTIFS,
@@ -27,7 +29,7 @@ URLS = {
 YEAR_MIN = 2022
 EXCLUDE_DEPT = "999"
 EXCLUDE_REG = "99"
-MIN_MONTANT = 0  
+MIN_MONTANT = 0
 CHUNKSIZE = 100_000
 # --- Valeurs par défaut des filtres
 DEFAULT_ANNEE = 2023
@@ -74,12 +76,12 @@ COLONNES_EFFECTIFS = {
     "effectif": "Effectif",
 }
 PIE_COLORS = [
-    COULEURS["principal"],    # FF004A99 (bleu foncé)
-    COULEURS["secondaire"],   # FF008080 (bleu turquoise)
-    COULEURS["accent"],       # FF4CAF50 (vert)
-    "FF0070AD",               # bleu moyen
-    "FF6372C4",               # bleu clair
-    "FFA9D480",               # vert clair
+    COULEURS["principal"],  # FF004A99 (bleu foncé)
+    COULEURS["secondaire"],  # FF008080 (bleu turquoise)
+    COULEURS["accent"],  # FF4CAF50 (vert)
+    "FF0070AD",  # bleu moyen
+    "FF6372C4",  # bleu clair
+    "FFA9D480",  # vert clair
 ]
 
 # --- Styles de texte ---

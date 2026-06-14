@@ -24,12 +24,16 @@ def add_filter(
     cell_title = sheet.cell(row=row_num, column=col_num)
     cell_title.value = title
     cell_title.alignment = Alignment(horizontal="center", vertical="center")
-    cell_title.fill = PatternFill(start_color=color_label, end_color=color_label, fill_type="solid")
+    cell_title.fill = PatternFill(
+        start_color=color_label, end_color=color_label, fill_type="solid"
+    )
 
     cell_value = sheet.cell(row=row_num, column=col_num + 1)
     cell_value.value = default_value
     cell_value.alignment = Alignment(horizontal="center", vertical="center")
-    cell_value.fill = PatternFill(start_color=color_value, end_color=color_value, fill_type="solid")
+    cell_value.fill = PatternFill(
+        start_color=color_value, end_color=color_value, fill_type="solid"
+    )
 
     formula1 = f'"{",".join(str(v) for v in values)}"'
     dv = DataValidation(type="list", formula1=formula1)

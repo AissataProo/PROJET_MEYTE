@@ -40,9 +40,12 @@ def add_filter(
 
     if title.lower() == "plateforme":
         _add_filter_value(
-            sheet, DEFAULT_PLATFORM2,
-            start_row + 2, end_column + 1,
-            end_row + 2, end_column + 2,
+            sheet,
+            DEFAULT_PLATFORM2,
+            start_row + 2,
+            end_column + 1,
+            end_row + 2,
+            end_column + 2,
         )
         _add_data_validation(sheet, start_row + 2, end_column + 1, formula)
 
@@ -113,8 +116,7 @@ def _add_data_validation(
     start_column: int,
     formula: str,
 ) -> None:
-    """
-    """
+    """ """
     dv = DataValidation(type="list", formula1=formula)
     sheet.add_data_validation(dv)
     dv.add(sheet.cell(row=start_row, column=start_column).coordinate)

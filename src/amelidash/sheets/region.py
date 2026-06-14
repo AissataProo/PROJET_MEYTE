@@ -18,7 +18,9 @@ class OngletRegion:
 
         ws["A1"] = "Effectifs par Région"
         ws["A1"].font = Font(bold=True, size=13, color=COULEURS["blanc"])
-        ws["A1"].fill = PatternFill(start_color=COULEURS["principal"], fill_type="solid")
+        ws["A1"].fill = PatternFill(
+            start_color=COULEURS["principal"], fill_type="solid"
+        )
 
         regions = sorted(self.df["Région"].dropna().unique())[:100]
 

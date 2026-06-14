@@ -39,16 +39,6 @@ class OngletFiltres:
             self.color_value,
             self.color_label,
         )
-
-        add_filter(
-        ws,
-        "F1",
-        "Département",
-        dept_list_top10,
-        dept_list_top10[0] if dept_list_top10 else "",
-        self.color_value,
-        self.color_label,
-    )
         add_filter(
             ws,
             "C1",
@@ -80,7 +70,10 @@ class OngletFiltres:
             "A1": ("Pathologie", sorted(self.df["patho_niv1"].dropna().unique())),
             "B1": (
                 "Annee",
-                [str(int(a)) for a in sorted(self.df["annee"].dropna().unique(), reverse=True)],
+                [
+                    str(int(a))
+                    for a in sorted(self.df["annee"].dropna().unique(), reverse=True)
+                ],
             ),
             "C1": ("Région", sorted(self.df["Région"].dropna().unique())),
             "D1": ("Département", sorted(self.df["Département"].dropna().unique())),

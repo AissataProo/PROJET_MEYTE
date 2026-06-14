@@ -51,7 +51,9 @@ class OngletPostes:
         postes_with_amount = []
         for poste in postes_base:
             montant = 0
-            for row in ws_dep.iter_rows(min_row=2, max_row=ws_dep.max_row, values_only=True):
+            for row in ws_dep.iter_rows(
+                min_row=2, max_row=ws_dep.max_row, values_only=True
+            ):
                 if (
                     row[col_poste - 1]
                     and str(row[col_poste - 1]).strip() == poste
@@ -87,7 +89,9 @@ class OngletPostes:
         ws["C3"].alignment = Alignment(horizontal="center")
 
         annees_str = ",".join(str(int(a)) for a in annees_list)
-        dv_annee = DataValidation(type="list", formula1=f'"{annees_str}"', allow_blank=False)
+        dv_annee = DataValidation(
+            type="list", formula1=f'"{annees_str}"', allow_blank=False
+        )
         ws.add_data_validation(dv_annee)
         dv_annee.add("C3")
 
@@ -102,7 +106,9 @@ class OngletPostes:
         ws["F3"].alignment = Alignment(horizontal="center")
 
         postes_str = ",".join(postes_list)
-        dv_poste = DataValidation(type="list", formula1=f'"{postes_str}"', allow_blank=False)
+        dv_poste = DataValidation(
+            type="list", formula1=f'"{postes_str}"', allow_blank=False
+        )
         ws.add_data_validation(dv_poste)
         dv_poste.add("F3")
 
@@ -134,7 +140,9 @@ class OngletPostes:
             if num_format:
                 cell.number_format = num_format
 
-        for col_i, lbl in enumerate(["Poste", "Montant (E)", "Effectif", "Cout/patient"], start=1):
+        for col_i, lbl in enumerate(
+            ["Poste", "Montant (E)", "Effectif", "Cout/patient"], start=1
+        ):
             make_header_cell(ws.cell(TABLE_HDR, col_i), lbl)
 
         ws.row_dimensions[TABLE_HDR].height = 22
