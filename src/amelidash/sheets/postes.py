@@ -1,11 +1,10 @@
-"""Onglet Postes : détails des dépenses par pathologie + camembert répartition des postes."""
+"""Onglet Postes : Tableaux de synthèse + détails par patho_niv2 + camembert."""
 
 from openpyxl.chart import PieChart, Reference
 from openpyxl.chart.label import DataLabelList
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
-
 from config import SHEET_CLEANED_DEPENSES
 
 
@@ -23,183 +22,150 @@ class OngletPostes:
         ws_dep = self.wb[self.sheet_cleaned_dep]
         sheet_dep = self.sheet_cleaned_dep
 
-        headers = {}
-        for idx, cell in enumerate(ws_dep[1], start=1):
-            if cell.value is not None:
-                headers[str(cell.value).strip()] = idx
-
-        col_annee = headers.get("annee", 1)
-        col_patho1 = headers.get("patho_niv1", 2)
-        col_poste = headers.get("poste de dépense", 4)
-        col_montant = headers.get("montant", 6)
-
-        L_annee = get_column_letter(col_annee)
-        L_patho1 = get_column_letter(col_patho1)
-        L_poste = get_column_letter(col_poste)
-        L_montant = get_column_letter(col_montant)
+        headers = {
+            str(cell.value).strip(): idx
+            for idx, cell in enumerate(ws_dep[1], start=1)
+            if cell.value
+        }
+        L_annee = get_column_letter(headers.get("annee", 1))
+        L_patho2 = get_column_letter(headers.get("patho_niv2", 3))
+        L_poste = get_column_letter(headers.get("poste de dépense", 4))
+        L_montant = get_column_letter(headers.get("montant", 6))
 
         annees_list = sorted(self.df["annee"].dropna().unique(), reverse=True)
-        annee_def = int(annees_list[0]) if len(annees_list) else None
+        annee_def = int(annees_list[0]) if annees_list else 2022
 
-        postes_list = sorted(
-            {
-                str(v).strip()
-                for v in self.df["poste de dépense"].dropna().unique()
-                if v
-                and "total" not in str(v).lower()
-                and "soins" not in str(v).lower()
-                and str(v).strip().lower() != "nan"
-            }
-        )
-        poste_def = postes_list[0] if postes_list else "Sélectionner"
+        category_mapping = {
+            "Soins de ville": "Soins de ville",
+            "Hospitalisations": "Hospitalisations (tous secteurs)",
+            "Prestations en espèces": "Prestations en espèces",
+        }
 
         pathos_list = sorted(
-            {
-                str(v).strip()
-                for v in self.df["patho_niv1"].dropna().unique()
-                if v and "total" not in str(v).lower()
-            }
+            {str(v).strip() for v in self.df["patho_niv2"].dropna().unique() if v}
         )
 
         COLOR_ROUGE = "C00000"
-        COLOR_BLEU = "FF4472C4"
-
-        bord_h = Border(*([Side(style="thin", color="4472C4")] * 4))
+        COLOR_BLEU = "4472C4"
         bord_d = Border(*([Side(style="thin", color="CCCCCC")] * 4))
-        alt1 = PatternFill("solid", fgColor="FFF5F5F5")
-        alt2 = PatternFill("solid", fgColor="FFFFFFFF")
 
-        # Fond léger rouge + onglet
-        ws.sheet_properties.tabColor = COLOR_ROUGE
-        fond = PatternFill("solid", fgColor="FCE9E9")
-        for row in range(1, 60):
-            for col in range(1, 16):
-                ws.cell(row, col).fill = fond
-
-        # --- Filtres ---
-        ws["A2"] = "Année"
-        ws["A2"].font = Font(bold=True, color="FFFFFF")
-        ws["A2"].fill = PatternFill("solid", fgColor=COLOR_BLEU)
-        ws["A2"].alignment = Alignment(horizontal="center")
+        # --- Filtre Année ---
+        ws["A2"] = "Année :"
+        ws["A2"].font = Font(bold=True)
         ws["B2"] = annee_def
         ws["B2"].font = Font(bold=True)
-        ws["B2"].alignment = Alignment(horizontal="center")
-
-        ws["A4"] = "Poste"
-        ws["A4"].font = Font(bold=True, color="FFFFFF")
-        ws["A4"].fill = PatternFill("solid", fgColor=COLOR_BLEU)
-        ws["A4"].alignment = Alignment(horizontal="center")
-        ws["B4"] = poste_def
-        ws["B4"].font = Font(bold=True)
-        ws["B4"].alignment = Alignment(horizontal="center")
-
         dv_a = DataValidation(
-            type="list",
-            formula1=f'"{",".join(str(int(a)) for a in annees_list)}"',
-            allow_blank=False,
-        )
-        dv_p = DataValidation(
-            type="list", formula1=f'"{",".join(postes_list)}"', allow_blank=False
+            type="list", formula1=f'"{",".join(str(int(a)) for a in annees_list)}"'
         )
         ws.add_data_validation(dv_a)
-        ws.add_data_validation(dv_p)
         dv_a.add("B2")
-        dv_p.add("B4")
 
-        # --- KPI total ---
-        ws["A6"] = "Total des dépenses (poste)"
-        ws["A6"].font = Font(bold=True, size=11, color="FFFFFF")
-        ws["A6"].fill = PatternFill("solid", fgColor=COLOR_ROUGE)
-        ws["A6"].alignment = Alignment(horizontal="left", vertical="center")
-        ws.merge_cells("A6:B6")
-        ws["C6"] = (
-            f"=IFERROR(SUMIFS('{sheet_dep}'!${L_montant}:${L_montant},"
-            f"'{sheet_dep}'!${L_annee}:${L_annee},$B$2,"
-            f"'{sheet_dep}'!${L_poste}:${L_poste},$B$4),0)"
+        # Total des dépenses de l'année sélectionnée
+        ws["A4"] = "Total des dépenses"
+        ws["B4"] = (
+            f"=SUMIFS('{sheet_dep}'!${L_montant}:${L_montant},"
+            f"'{sheet_dep}'!${L_annee}:${L_annee},$B$2)"
         )
-        ws["C6"].font = Font(bold=True, size=13, color=COLOR_ROUGE)
-        ws["C6"].number_format = "#,##0 €"
+        ws["B4"].number_format = "#,##0 €"
+        ws["A4"].font = Font(bold=True)
+        ws["B4"].font = Font(bold=True)
 
-        # --- Détails : dépense par pathologie ---
-        ws.merge_cells("A8:C8")
-        ws["A8"] = "Détails des prestations — dépense par pathologie"
-        ws["A8"].font = Font(bold=True, size=12, color="FFFFFF")
-        ws["A8"].fill = PatternFill("solid", fgColor=COLOR_ROUGE)
-        ws["A8"].alignment = Alignment(horizontal="center", vertical="center")
-        ws.row_dimensions[8].height = 22
+        # --- Tableau 1 : Détail par patho_niv2 en haut ---
+        start_row = 5
+        ws[f"A{start_row}"] = "Détails des dépenses par Pathologie (Niv 2)"
+        ws.merge_cells(f"A{start_row}:C{start_row}")
+        ws.cell(start_row, 1).font = Font(bold=True, color="FFFFFF")
+        ws.cell(start_row, 1).fill = PatternFill("solid", fgColor=COLOR_ROUGE)
 
-        ws.cell(9, 1, "Pathologie")
-        ws.cell(9, 2, "Dépense (€)")
-        ws.cell(9, 3, "Part %")
-        for c in [ws.cell(9, 1), ws.cell(9, 2), ws.cell(9, 3)]:
-            c.font = Font(bold=True, color="FFFFFF", size=10)
-            c.fill = PatternFill("solid", fgColor=COLOR_BLEU)
-            c.alignment = Alignment(horizontal="center", vertical="center")
-            c.border = bord_h
-        ws.row_dimensions[9].height = 20
+        headers_patho = ["Pathologie", "Montant (€)", "%"]
+        for i, h in enumerate(headers_patho, 1):
+            ws.cell(start_row + 1, i, h).fill = PatternFill("solid", fgColor=COLOR_BLEU)
+            ws.cell(start_row + 1, i).font = Font(color="FFFFFF")
+            ws.cell(start_row + 1, i).alignment = Alignment(horizontal="center")
+
+        ws["D1"] = (
+            f"=SUMIFS('{sheet_dep}'!${L_montant}:${L_montant},"
+            f"'{sheet_dep}'!${L_annee}:${L_annee},$B$2)"
+        )
 
         for idx, patho in enumerate(pathos_list):
-            r = 10 + idx
-            coul = alt1 if idx % 2 == 0 else alt2
-            ws.cell(r, 1, patho)
-            ws.cell(r, 1).fill = coul
-            ws.cell(r, 1).border = bord_d
-            ws.cell(r, 1).alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
-            ws.cell(r, 1).font = Font(size=10)
-
+            r = start_row + 2 + idx
+            ws.cell(r, 1, patho).border = bord_d
             ws.cell(r, 2).value = (
-                f"=IFERROR(SUMIFS('{sheet_dep}'!${L_montant}:${L_montant},"
+                f"=SUMIFS('{sheet_dep}'!${L_montant}:${L_montant},"
                 f"'{sheet_dep}'!${L_annee}:${L_annee},$B$2,"
-                f"'{sheet_dep}'!${L_poste}:${L_poste},$B$4,"
-                f"'{sheet_dep}'!${L_patho1}:${L_patho1},A{r}),0)"
+                f"'{sheet_dep}'!${L_patho2}:${L_patho2},A{r})"
             )
             ws.cell(r, 2).number_format = "#,##0 €"
-            ws.cell(r, 2).fill = coul
-            ws.cell(r, 2).border = bord_d
-            ws.cell(r, 2).alignment = Alignment(horizontal="right")
-            ws.cell(r, 2).font = Font(size=10)
-
-            ws.cell(r, 3).value = f"=IFERROR(B{r}/$C$6,0)"
+            ws.cell(r, 3).value = f"=IF($D$1=0,0,B{r}/$D$1)"
             ws.cell(r, 3).number_format = "0.0%"
-            ws.cell(r, 3).fill = coul
-            ws.cell(r, 3).border = bord_d
-            ws.cell(r, 3).alignment = Alignment(horizontal="right")
-            ws.cell(r, 3).font = Font(size=10)
 
-        # --- Camembert : répartition des postes (par année) ---
-        PIE_COL = 27
-        L_PIE = get_column_letter(PIE_COL)
-        ws.cell(1, PIE_COL, "Poste")
-        ws.cell(1, PIE_COL + 1, "Montant")
-        for idx, poste in enumerate(postes_list):
-            r = 2 + idx
-            ws.cell(r, PIE_COL, poste)
-            ws.cell(r, PIE_COL + 1).value = (
-                f"=IFERROR(SUMIFS('{sheet_dep}'!${L_montant}:${L_montant},"
+        # Largeurs du tableau pathologie
+        ws.column_dimensions["A"].width = 52
+        ws.column_dimensions["B"].width = 18
+        ws.column_dimensions["C"].width = 12
+        ws.column_dimensions["D"].width = 10
+
+        # --- Mini tableau postes caché ---
+        poste_title_row = 5
+        poste_col = 8  # H
+
+        ws.cell(poste_title_row, poste_col, "Répartition par Poste")
+        ws.merge_cells(
+            start_row=poste_title_row,
+            start_column=poste_col,
+            end_row=poste_title_row,
+            end_column=poste_col + 1
+        )
+        ws.cell(poste_title_row, poste_col).font = Font(bold=True, color="FFFFFF")
+        ws.cell(poste_title_row, poste_col).fill = PatternFill("solid", fgColor=COLOR_BLEU)
+
+        ws.cell(poste_title_row + 1, poste_col, "Poste")
+        ws.cell(poste_title_row + 1, poste_col + 1, "Montant")
+
+        for i, (label, source_val) in enumerate(category_mapping.items()):
+            row = poste_title_row + 2 + i
+            ws.cell(row, poste_col, label)
+            ws.cell(row, poste_col + 1).value = (
+                f"=SUMIFS('{sheet_dep}'!${L_montant}:${L_montant},"
                 f"'{sheet_dep}'!${L_annee}:${L_annee},$B$2,"
-                f"'{sheet_dep}'!${L_poste}:${L_poste},$" + L_PIE + f"${r}),0)"
+                f"'{sheet_dep}'!${L_poste}:${L_poste},\"{source_val}\")"
             )
-            ws.cell(r, PIE_COL + 1).number_format = "#,##0"
-        n_post = len(postes_list)
+            ws.cell(row, poste_col + 1).number_format = "#,##0 €"
 
+        # Cacher le tableau des postes
+        ws.column_dimensions["H"].hidden = True
+        ws.column_dimensions["I"].hidden = True
+
+        # --- Camembert à droite ---
         pie = PieChart()
-        pie.title = "Répartition des postes"
-        pie.height = 11
-        pie.width = 14
-        pie.style = 10
-        pie.add_data(
-            Reference(ws, min_col=PIE_COL + 1, min_row=1, max_row=1 + n_post),
-            titles_from_data=True,
+        pie.title = "Répartition des dépenses"
+
+        data = Reference(
+            ws,
+            min_col=poste_col + 1,
+            min_row=poste_title_row + 2,
+            max_row=poste_title_row + 4
         )
-        pie.set_categories(
-            Reference(ws, min_col=PIE_COL, min_row=2, max_row=1 + n_post)
+        cats = Reference(
+            ws,
+            min_col=poste_col,
+            min_row=poste_title_row + 2,
+            max_row=poste_title_row + 4
         )
+
+        pie.add_data(data, titles_from_data=False)
+        pie.set_categories(cats)
         pie.dataLabels = DataLabelList()
         pie.dataLabels.showPercent = True
-        ws.add_chart(pie, "E8")
+        pie.dataLabels.showVal = False
+        pie.legend = None
 
-        ws.column_dimensions["A"].width = 48
-        ws.column_dimensions["B"].width = 18
-        ws.column_dimensions["C"].width = 14
-        ws.column_dimensions[L_PIE].hidden = True
-        ws.column_dimensions[get_column_letter(PIE_COL + 1)].hidden = True
+        ws.add_chart(pie, "J5")
+
+        # Largeur de la zone du graphique
+        ws.column_dimensions["J"].width = 3
+
+        # Hauteurs utiles
+        ws.row_dimensions[2].height = 22
+        ws.row_dimensions[start_row].height = 22

@@ -1,6 +1,6 @@
 """Onglet Graphiques :
-   - Effectif par Sexe x Classe d'âge (filtres Pathologie + Région + Année)
-   - Taux de prévalence par Département (Top 15, filtres Pathologie + Année)
+- Effectif par Sexe x Classe d'âge (filtres Pathologie + Région + Année)
+- Taux de prévalence par Département (Top 15, filtres Pathologie + Année)
 """
 
 import pandas as pd
@@ -18,9 +18,20 @@ class OngletGraphiques:
         self.df_dep = df_dep.copy() if df_dep is not None else None
 
     def create(self):
-        for nom in ["Graphiques", "Calc", "CalcDep", "CalcRegSexe", "CalcEvol", "CalcAge",
-                    "CalcMontant", "Source", "SourceDep", "SourceRegSexe", "SourceAge",
-                    "SourceMontant"]:
+        for nom in [
+            "Graphiques",
+            "Calc",
+            "CalcDep",
+            "CalcRegSexe",
+            "CalcEvol",
+            "CalcAge",
+            "CalcMontant",
+            "Source",
+            "SourceDep",
+            "SourceRegSexe",
+            "SourceAge",
+            "SourceMontant",
+        ]:
             if nom in self.wb.sheetnames:
                 self.wb.remove(self.wb[nom])
 
@@ -83,15 +94,17 @@ class OngletGraphiques:
 
         # Source 4 : Région / patho / annee / âge -> Effectif, Population
         src4 = (
-            df.groupby(["Région", "patho_niv1", "annee", "Classe d'age"], observed=True)[
-                ["Effectif", "Population de référence"]
-            ]
+            df.groupby(
+                ["Région", "patho_niv1", "annee", "Classe d'age"], observed=True
+            )[["Effectif", "Population de référence"]]
             .sum()
             .reset_index()
         )
         ws_s4 = self.wb.create_sheet("SourceAge")
         ws_s4.sheet_state = "hidden"
-        ws_s4.append(["Région", "patho_niv1", "annee", "Classe d'age", "Effectif", "Population"])
+        ws_s4.append(
+            ["Région", "patho_niv1", "annee", "Classe d'age", "Effectif", "Population"]
+        )
         for r in src4.itertuples(index=False):
             ws_s4.append([r[0], r[1], int(r[2]), r[3], float(r[4]), float(r[5])])
 
@@ -149,18 +162,13 @@ class OngletGraphiques:
 
         # ===================== Top 15 départements (prévalence, défaut) =====================
         sub = df[(df["patho_niv1"] == patho_def) & (df["annee"] == annee_def)]
-        dep_def = (
-            sub.groupby("Département", observed=True)[
-                ["Effectif", "Population de référence"]
-            ]
-            .sum()
-        )
-        dep_def["prev"] = dep_def["Effectif"] / dep_def["Population de référence"].replace(
-            0, pd.NA
-        )
-        top_dep = (
-            dep_def["prev"].dropna().nlargest(15).sort_values().index.tolist()
-        )
+        dep_def = sub.groupby("Département", observed=True)[
+            ["Effectif", "Population de référence"]
+        ].sum()
+        dep_def["prev"] = dep_def["Effectif"] / dep_def[
+            "Population de référence"
+        ].replace(0, pd.NA)
+        top_dep = dep_def["prev"].dropna().nlargest(15).sort_values().index.tolist()
 
         # ===================== Feuilles =====================
         ws = self.wb.create_sheet("Graphiques")
@@ -213,7 +221,9 @@ class OngletGraphiques:
         _filtre("A5", "B5", "Année", annee_def)
 
         # Filtre pathologie : nom complet visible (renvoi à la ligne)
-        ws["B3"].alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        ws["B3"].alignment = Alignment(
+            horizontal="center", vertical="center", wrap_text=True
+        )
         ws.row_dimensions[3].height = 30
 
         dv_p = DataValidation(type="list", formula1=f"${LP}$2:${LP}${1 + len(pathos)}")
@@ -303,7 +313,9 @@ class OngletGraphiques:
         chart1.width = 16
         chart1.style = 12
         chart1.add_data(
-            Reference(calc, min_col=2, max_col=1 + n_age, min_row=1, max_row=1 + n_sexe),
+            Reference(
+                calc, min_col=2, max_col=1 + n_age, min_row=1, max_row=1 + n_sexe
+            ),
             titles_from_data=True,
         )
         chart1.set_categories(Reference(calc, min_col=1, min_row=2, max_row=1 + n_sexe))
@@ -383,7 +395,9 @@ class OngletGraphiques:
         chart3.width = 16
         chart3.style = 12
         chart3.add_data(
-            Reference(calcr, min_col=2, max_col=1 + len(sexes), min_row=1, max_row=1 + n_reg),
+            Reference(
+                calcr, min_col=2, max_col=1 + len(sexes), min_row=1, max_row=1 + n_reg
+            ),
             titles_from_data=True,
         )
         chart3.set_categories(Reference(calcr, min_col=1, min_row=2, max_row=1 + n_reg))
@@ -427,7 +441,9 @@ class OngletGraphiques:
             Reference(calca, min_col=2, min_row=1, max_row=n_age2 + 1),
             titles_from_data=True,
         )
-        chart5.set_categories(Reference(calca, min_col=1, min_row=2, max_row=n_age2 + 1))
+        chart5.set_categories(
+            Reference(calca, min_col=1, min_row=2, max_row=n_age2 + 1)
+        )
         chart5.x_axis.title = "Classe d'âge"
         chart5.y_axis.title = "Taux de prévalence"
         chart5.x_axis.delete = False

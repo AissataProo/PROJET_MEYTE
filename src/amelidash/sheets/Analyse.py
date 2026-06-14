@@ -63,7 +63,9 @@ class OngletAnalysesUnifiees:
 
         # ===== Source EFFECTIF agrégée (patho x annee) =====
         sexes = set(eff["Sexe"].astype(str).unique())
-        base_eff = eff[eff["Sexe"].astype(str) == "ENSEMBLE"] if "ENSEMBLE" in sexes else eff
+        base_eff = (
+            eff[eff["Sexe"].astype(str) == "ENSEMBLE"] if "ENSEMBLE" in sexes else eff
+        )
         base_eff = base_eff[
             ~base_eff["Classe d'age"].astype(str).str.lower().str.contains("tous")
             & ~base_eff["patho_niv1"].astype(str).str.lower().str.contains("total")
@@ -92,9 +94,7 @@ class OngletAnalysesUnifiees:
         )
         for i, patho in enumerate(top_eff.index, start=2):
             ws_data.cell(i, 1, str(patho))
-            ws_data.cell(i, 2).value = (
-                f"=SUMIFS($J:$J,$H:$H,A{i},$I:$I,Analyses!$B$3)"
-            )
+            ws_data.cell(i, 2).value = f"=SUMIFS($J:$J,$H:$H,A{i},$I:$I,Analyses!$B$3)"
             ws_data.cell(i, 2).number_format = "#,##0"
         n_eff = len(top_eff)
 

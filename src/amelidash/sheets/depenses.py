@@ -1,6 +1,7 @@
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
+from openpyxl.chart import PieChart, Reference  # Import nécessaire pour le graphique
 
 
 class OngletDepenses:
@@ -224,6 +225,23 @@ class OngletDepenses:
 
         TABLE1_END = TABLE1_START + len(patho_rows) - 1 if patho_rows else TABLE1_START
 
+        # --- AJOUT DU GRAPHIQUE PIE ---
+        if patho_rows:
+            pie = PieChart()
+            pie.title = "Coût/Patient par Pathologie"
+            pie.height = 10
+            pie.width = 12
+            # Données : Colonne 4 (Coût/patient)
+            data_pie = Reference(ws, min_col=4, min_row=TABLE1_HDR, max_row=TABLE1_END)
+            # Catégories : Colonne 1 (Pathologie)
+            cats_pie = Reference(
+                ws, min_col=1, min_row=TABLE1_START, max_row=TABLE1_END
+            )
+
+            pie.add_data(data_pie, titles_from_data=True)
+            pie.set_categories(cats_pie)
+            ws.add_chart(pie, "F6")
+
         S2 = TABLE1_END + 3
 
         ws.merge_cells(f"A{S2}:E{S2}")
@@ -273,7 +291,7 @@ class OngletDepenses:
 
             ws.row_dimensions[r].height = 18
 
-        ws.column_dimensions["A"].width = 55
+        ws.column_dimensions["A"].width = 65
         ws.column_dimensions["B"].width = 28
         ws.column_dimensions["C"].width = 28
         ws.column_dimensions["D"].width = 18
