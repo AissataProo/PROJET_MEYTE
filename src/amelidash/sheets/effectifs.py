@@ -3,7 +3,7 @@
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from config import COULEURS, SHEET_CLEANED_EFFECTIFS
-from components.filters import add_filter
+from components.filterseff import add_filter
 
 
 class OngletEffectifs:

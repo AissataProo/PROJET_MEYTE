@@ -1,10 +1,9 @@
-"""Onglet Postes : tableau de bord depenses par poste avec filtres et graphique."""
+"""Onglet Postes : tableau de bord depenses par poste avec filtres et graphique pie."""
 
-from openpyxl.chart import BarChart, Reference
+from openpyxl.chart import PieChart, Reference
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
-
 from config import SHEET_CLEANED_DEPENSES
 
 
@@ -56,8 +55,10 @@ class OngletPostes:
             for row in ws_dep.iter_rows(
                 min_row=2, max_row=ws_dep.max_row, values_only=True
             ):
-                sous_poste = str(row[col_patho3 - 1]).strip() if row[col_patho3 - 1] else ""
-                
+                sous_poste = (
+                    str(row[col_patho3 - 1]).strip() if row[col_patho3 - 1] else ""
+                )
+
                 if (
                     row[col_poste - 1]
                     and str(row[col_poste - 1]).strip() == poste
@@ -77,15 +78,17 @@ class OngletPostes:
 
         poste_defaut = postes_list[0] if postes_list else "Sélectionner"
 
-        patho3_list = sorted(set(
-            str(row[col_patho3 - 1]).strip()
-            for row in ws_dep.iter_rows(min_row=2, values_only=True)
-            if row[col_patho3 - 1]
-            and str(row[col_poste - 1]).strip() == poste_defaut
-            and "total" not in str(row[col_patho3 - 1]).strip().lower()
-            and "soins" not in str(row[col_patho3 - 1]).strip().lower()
-            and str(row[col_patho3 - 1]).strip().lower() != "nan"
-        ))
+        patho3_list = sorted(
+            set(
+                str(row[col_patho3 - 1]).strip()
+                for row in ws_dep.iter_rows(min_row=2, values_only=True)
+                if row[col_patho3 - 1]
+                and str(row[col_poste - 1]).strip() == poste_defaut
+                and "total" not in str(row[col_patho3 - 1]).strip().lower()
+                and "soins" not in str(row[col_patho3 - 1]).strip().lower()
+                and str(row[col_patho3 - 1]).strip().lower() != "nan"
+            )
+        )
 
         COLOR_VERT = "FF006B4F"
         COLOR_BLEU = "FF4472C4"
@@ -108,7 +111,9 @@ class OngletPostes:
         ws["B3"].alignment = Alignment(horizontal="center")
 
         annees_str = ",".join(str(int(a)) for a in annees_list)
-        dv_annee = DataValidation(type="list", formula1=f'"{annees_str}"', allow_blank=False)
+        dv_annee = DataValidation(
+            type="list", formula1=f'"{annees_str}"', allow_blank=False
+        )
         ws.add_data_validation(dv_annee)
         dv_annee.add("B3")
 
@@ -123,7 +128,9 @@ class OngletPostes:
         ws["B5"].alignment = Alignment(horizontal="center")
 
         postes_str = ",".join(postes_list)
-        dv_poste = DataValidation(type="list", formula1=f'"{postes_str}"', allow_blank=False)
+        dv_poste = DataValidation(
+            type="list", formula1=f'"{postes_str}"', allow_blank=False
+        )
         ws.add_data_validation(dv_poste)
         dv_poste.add("B5")
 
@@ -176,7 +183,9 @@ class OngletPostes:
             ws[f"A{row}"] = patho3
             ws[f"A{row}"].fill = couleur
             ws[f"A{row}"].border = border_data
-            ws[f"A{row}"].alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+            ws[f"A{row}"].alignment = Alignment(
+                horizontal="left", vertical="center", wrap_text=True
+            )
             ws[f"A{row}"].font = Font(size=10)
 
             ws[f"B{row}"] = (
@@ -210,21 +219,117 @@ class OngletPostes:
             ws.row_dimensions[row].height = 25
 
         last_row = 12 + len(patho3_list) - 1
-        
-        chart = BarChart()
-        chart.type = "col"
-        chart.title = "Dépenses par Pathologie"
-        chart.y_axis.title = "Montant (€)"
-        chart.height = 14
-        chart.width = 22
 
-        data = Reference(ws, min_col=2, min_row=10, max_row=last_row)
-        cats = Reference(ws, min_col=1, min_row=12, max_row=last_row)
-        chart.add_data(data, titles_from_data=True)
-        chart.set_categories(cats)
-        ws.add_chart(chart, "G10")
+        S_COMP = last_row + 3
+
+        ws.merge_cells(f"A{S_COMP}:E{S_COMP}")
+        ws[f"A{S_COMP}"] = "Comparaison annuelle"
+        ws[f"A{S_COMP}"].font = Font(bold=True, size=12, color="FFFFFF")
+        ws[f"A{S_COMP}"].fill = PatternFill(start_color=COLOR_VERT, fill_type="solid")
+        ws[f"A{S_COMP}"].alignment = Alignment(horizontal="center", vertical="center")
+        ws.row_dimensions[S_COMP].height = 25
+
+        COMP_HDR = S_COMP + 1
+        COMP_START = COMP_HDR + 1
+
+        ws.cell(COMP_HDR, 1).value = "Pathologie"
+        ws.cell(COMP_HDR, 2).value = "Dép. 2022"
+        ws.cell(COMP_HDR, 3).value = "Dép. 2023"
+        ws.cell(COMP_HDR, 4).value = "Variation"
+        ws.cell(COMP_HDR, 5).value = "Évol. %"
+        for cell in [ws.cell(COMP_HDR, i) for i in range(1, 6)]:
+            cell.font = Font(bold=True, color="FFFFFF", size=10)
+            cell.fill = PatternFill(start_color=COLOR_BLEU, fill_type="solid")
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = border_header
+        ws.row_dimensions[COMP_HDR].height = 22
+
+        for idx, patho in enumerate(patho3_list):
+            r = COMP_START + idx
+            couleur = couleur_alt_1 if idx % 2 == 0 else couleur_alt_2
+
+            ws.cell(r, 1).value = patho
+            ws.cell(r, 1).fill = couleur
+            ws.cell(r, 1).border = border_data
+            ws.cell(r, 1).alignment = Alignment(
+                horizontal="left", vertical="center", wrap_text=True
+            )
+            ws.cell(r, 1).font = Font(size=10)
+
+            ws.cell(r, 2).value = (
+                f"=IFERROR(SUMIFS('{sheet_dep}'!${col_montant_letter}:${col_montant_letter},"
+                f"'{sheet_dep}'!${col_patho3_letter}:${col_patho3_letter},A{r},"
+                f"'{sheet_dep}'!${col_poste_letter}:${col_poste_letter},B$5,"
+                f"'{sheet_dep}'!${col_annee_letter}:${col_annee_letter},2022),0)"
+            )
+            ws.cell(r, 2).number_format = "#,##0"
+            ws.cell(r, 2).fill = couleur
+            ws.cell(r, 2).border = border_data
+            ws.cell(r, 2).alignment = Alignment(horizontal="right")
+
+            ws.cell(r, 3).value = (
+                f"=IFERROR(SUMIFS('{sheet_dep}'!${col_montant_letter}:${col_montant_letter},"
+                f"'{sheet_dep}'!${col_patho3_letter}:${col_patho3_letter},A{r},"
+                f"'{sheet_dep}'!${col_poste_letter}:${col_poste_letter},B$5,"
+                f"'{sheet_dep}'!${col_annee_letter}:${col_annee_letter},2023),0)"
+            )
+            ws.cell(r, 3).number_format = "#,##0"
+            ws.cell(r, 3).fill = couleur
+            ws.cell(r, 3).border = border_data
+            ws.cell(r, 3).alignment = Alignment(horizontal="right")
+
+            ws.cell(r, 4).value = f"=C{r}-B{r}"
+            ws.cell(r, 4).number_format = "#,##0"
+            ws.cell(r, 4).fill = couleur
+            ws.cell(r, 4).border = border_data
+            ws.cell(r, 4).alignment = Alignment(horizontal="right")
+
+            ws.cell(r, 5).value = f"=IFERROR((C{r}-B{r})/B{r},0)"
+            ws.cell(r, 5).number_format = "0.00%"
+            ws.cell(r, 5).fill = couleur
+            ws.cell(r, 5).border = border_data
+            ws.cell(r, 5).alignment = Alignment(horizontal="right")
+
+            ws.row_dimensions[r].height = 18
+
+        PIE_COL = 27
+        PIE_COL_LETTER = get_column_letter(PIE_COL)
+
+        ws.cell(6, PIE_COL).value = "Poste"
+        ws.cell(6, PIE_COL + 1).value = "Montant"
+
+        for idx, poste in enumerate(postes_list, start=0):
+            r = 7 + idx
+            ws.cell(r, PIE_COL).value = poste
+            ws.cell(r, PIE_COL + 1).value = (
+                f"=IFERROR(SUMIFS('{sheet_dep}'!${col_montant_letter}:${col_montant_letter},"
+                f"'{sheet_dep}'!${col_annee_letter}:${col_annee_letter},$B$3,"
+                f"'{sheet_dep}'!${col_poste_letter}:${col_poste_letter},$"
+                + PIE_COL_LETTER
+                + f"${r}),0)"
+            )
+
+        chart_pie = PieChart()
+        chart_pie.title = "Répartition des Dépenses par Poste"
+        chart_pie.height = 15
+        chart_pie.width = 20
+        chart_pie.style = 12
+
+        data_pie = Reference(
+            ws, min_col=PIE_COL + 1, min_row=6, max_row=7 + len(postes_list) - 1
+        )
+        cats_pie = Reference(
+            ws, min_col=PIE_COL, min_row=7, max_row=7 + len(postes_list) - 1
+        )
+
+        chart_pie.add_data(data_pie, titles_from_data=True)
+        chart_pie.set_categories(cats_pie)
+
+        ws.add_chart(chart_pie, "G10")
 
         ws.column_dimensions["A"].width = 50
         ws.column_dimensions["B"].width = 20
-        ws.column_dimensions["C"].width = 18
+        ws.column_dimensions["C"].width = 25
         ws.column_dimensions["D"].width = 18
+        ws.column_dimensions[PIE_COL_LETTER].hidden = True
+        ws.column_dimensions[get_column_letter(PIE_COL + 1)].hidden = True

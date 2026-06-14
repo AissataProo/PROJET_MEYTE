@@ -3,7 +3,6 @@
 from openpyxl.chart import BarChart, Reference
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils.dataframe import dataframe_to_rows
-
 from config import COULEURS, SHEET_CLEANED_EFFECTIFS
 
 
