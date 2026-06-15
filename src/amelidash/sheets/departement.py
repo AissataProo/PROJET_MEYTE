@@ -44,26 +44,22 @@ class OngletDepartement:
         COLOR_BLEU = "FF4472C4"
         COLOR_BLANC = "FFFFFFFF"
 
-        # Label
         ws.cell(row, 1).value = label
         ws.cell(row, 1).fill = PatternFill("solid", fgColor=COLOR_BLEU)
         ws.cell(row, 1).font = Font(bold=True, color="FFFFFF")
         ws.cell(row, 1).alignment = Alignment(horizontal="center", vertical="center")
 
-        # Valeur avec dropdown
         default = values[0] if values else ""
         ws.cell(row, 2).value = default
         ws.cell(row, 2).fill = PatternFill("solid", fgColor=COLOR_BLANC)
         ws.cell(row, 2).font = Font(bold=True)
         ws.cell(row, 2).alignment = Alignment(horizontal="center", vertical="center")
 
-        # Écriture des valeurs dans la feuille cachée (1 colonne par filtre)
         col_letter = get_column_letter(col_idx)
         for i, v in enumerate(values, 1):
             ws_listes.cell(i, col_idx, v)
         last = max(len(values), 1)
 
-        # Validation pointant vers la plage
         plage = f"'{ws_listes.title}'!${col_letter}$1:${col_letter}${last}"
         dv = DataValidation(type="list", formula1=plage, allow_blank=False)
         ws.add_data_validation(dv)
@@ -84,10 +80,66 @@ class OngletDepartement:
         chart.legend.position = "r"
         return chart
 
-    def create(self):
-        """Crée l'onglet Departement avec 2 filtres (Département, Année) et graphiques."""
+    def _set_axes(self, chart, x_title, y_title):
+        """Affiche les noms des axes X (catégories) et Y (valeurs)."""
+        chart.x_axis.title = x_title
+        chart.y_axis.title = y_title
+        chart.x_axis.delete = False
+        chart.y_axis.delete = False
 
-        # Préparation des données
+    def _top10_chart(self, ws, sheet_name, labels, deps, col_map, title, anchor):
+        """Top 10 départements pour un groupe de pathologies (filtré Année)."""
+        if not labels:
+            return
+
+        calc = self.wb.create_sheet(sheet_name)
+        calc.sheet_state = "hidden"
+        calc["A1"] = "Département"
+        calc["B1"] = "Patients"
+        calc["C1"] = "cle"
+
+        last = len(deps) + 1
+        for i, dep in enumerate(deps, 2):
+            calc.cell(i, 1, dep)
+            termes = [
+                f"SUMIFS('{self.sheet_eff}'!{col_map['eff']}:{col_map['eff']},"
+                f"'{self.sheet_eff}'!{col_map['patho']}:{col_map['patho']},\"{p}\","
+                f"'{self.sheet_eff}'!{col_map['dept']}:{col_map['dept']},A{i},"
+                f"'{self.sheet_eff}'!{col_map['annee']}:{col_map['annee']},Departement!$B$4)"
+                for p in labels
+            ]
+            calc.cell(i, 2).value = "=" + "+".join(termes)
+            calc.cell(i, 3).value = f"=B{i}+ROW()*0.000001"
+
+        # Classement top 10 (clé anti ex-æquo en C, helper masqué en H)
+        calc["E1"] = "Département"
+        calc["F1"] = "Patients"
+        for k in range(1, 11):
+            rr = k + 1
+            calc.cell(rr, 8).value = f"=IFERROR(LARGE($C$2:$C${last},{k}),\"\")"
+            calc.cell(rr, 5).value = (
+                f"=IFERROR(INDEX($A$2:$A${last},MATCH(H{rr},$C$2:$C${last},0)),\"\")"
+            )
+            calc.cell(rr, 6).value = (
+                f"=IFERROR(INDEX($B$2:$B${last},MATCH(H{rr},$C$2:$C${last},0)),0)"
+            )
+        calc.column_dimensions["H"].hidden = True
+
+        chart = self._create_chart("BarChart", title)
+        chart.type = "bar"
+        chart.add_data(
+            Reference(calc, min_col=6, min_row=1, max_row=11),
+            titles_from_data=True,
+        )
+        chart.set_categories(Reference(calc, min_col=5, min_row=2, max_row=11))
+        self._set_axes(chart, "Département", "Patients")
+        chart.legend = None
+        chart.height, chart.width = 12, 16
+        ws.add_chart(chart, anchor)
+
+    def create(self):
+        """Crée l'onglet Departement avec 3 filtres (Département, Année, Pathologie) et graphiques."""
+
         df = self.df.copy()
         df["Effectif"] = pd.to_numeric(df["Effectif"], errors="coerce").fillna(0)
 
@@ -96,7 +148,6 @@ class OngletDepartement:
                 df["Population de référence"], errors="coerce"
             ).fillna(0)
 
-        # Créer les listes de valeurs uniques
         deps = sorted(df["Département"].dropna().unique())
         annees = sorted([int(a) for a in df["annee"].dropna().unique()], reverse=True)
         regions = sorted(df["Région"].dropna().unique())
@@ -110,7 +161,7 @@ class OngletDepartement:
         )
         ages = sorted(df["Classe d'age"].dropna().unique())
 
-        # 1. Nettoyage des anciennes feuilles
+        # Nettoyage des anciennes feuilles
         for nom in [
             "Departement",
             "CalcListes",
@@ -122,11 +173,13 @@ class OngletDepartement:
             "CalcPrevAge",
             "CalcVariation",
             "CalcCorrelation",
+            "CalcTopCancer",
+            "CalcTopDiab",
         ]:
             if nom in self.wb.sheetnames:
                 self.wb.remove(self.wb[nom])
 
-        # 2. Création de l'onglet
+        # Création de l'onglet
         ws = self.wb.create_sheet("Departement")
         ws.sheet_view.showGridLines = False
         ws.freeze_panes = "A8"
@@ -138,11 +191,13 @@ class OngletDepartement:
         calc_listes = self.wb.create_sheet("CalcListes")
         calc_listes.sheet_state = "hidden"
 
-        # 3. FILTRES (Département + Année uniquement)
+        # Filtres (Département + Année + Pathologie)
         self._add_filter(ws, 3, "Département", list(deps), calc_listes, 1)
         self._add_filter(ws, 4, "Année", list(annees), calc_listes, 2)
+        # Filtre Pathologie : actif uniquement pour les tableaux et la prévalence
+        self._add_filter(ws, 5, "Pathologie", list(pathos), calc_listes, 3)
 
-        # 4. INDICATEURS CLÉS
+        # Indicateurs clés
         ws.merge_cells("E3:H3")
         ws["E3"] = "Indicateurs clés"
         ws["E3"].fill = PatternFill("solid", fgColor=COLOR_BLEU)
@@ -152,11 +207,12 @@ class OngletDepartement:
         ws["F4"].value = (
             f"=SUMIFS('{self.sheet_eff}'!{col_map['eff']}:{col_map['eff']},"
             f"'{self.sheet_eff}'!{col_map['dept']}:{col_map['dept']},B3,"
-            f"'{self.sheet_eff}'!{col_map['annee']}:{col_map['annee']},B4)"
+            f"'{self.sheet_eff}'!{col_map['annee']}:{col_map['annee']},B4,"
+            f"'{self.sheet_eff}'!{col_map['patho']}:{col_map['patho']},B5)"
         )
         ws["F4"].number_format = "#,##0"
 
-        # 5. FEUILLES DE CALCUL CACHÉES
+        # Feuilles de calcul cachées
         calc_top_patho = self.wb.create_sheet("CalcTopPatho")
         calc_top_patho.sheet_state = "hidden"
 
@@ -172,7 +228,7 @@ class OngletDepartement:
         calc_prev_age = self.wb.create_sheet("CalcPrevAge")
         calc_prev_age.sheet_state = "hidden"
 
-        # 6. GRAPHIQUE 1: Top pathologies par effectif (filtré Département + Année)
+        # Graphique 1 : Top pathologies par effectif (filtré Département + Année)
         calc_top_patho["A1"] = "Pathologie"
         calc_top_patho["B1"] = "Effectif"
 
@@ -194,10 +250,12 @@ class OngletDepartement:
         chart1.set_categories(
             Reference(calc_top_patho, min_col=1, min_row=2, max_row=len(pathos) + 1)
         )
+        self._set_axes(chart1, "Pathologie", "Effectif")
+        chart1.legend = None
         chart1.height, chart1.width = 12, 16
         ws.add_chart(chart1, "A8")
 
-        # 7. GRAPHIQUE 2: Effectif par pathologie et sexe (filtré Département + Année)
+        # Graphique 2 : Effectif par pathologie et sexe (légende conservée)
         calc_patho_sexe["A1"] = "Pathologie"
         for i, s in enumerate(sexes, 2):
             calc_patho_sexe.cell(1, i, s)
@@ -227,10 +285,11 @@ class OngletDepartement:
         chart2.set_categories(
             Reference(calc_patho_sexe, min_col=1, min_row=2, max_row=len(pathos) + 1)
         )
+        self._set_axes(chart2, "Pathologie", "Effectif")
         chart2.height, chart2.width = 12, 18
         ws.add_chart(chart2, "K8")
 
-        # Effectif par région
+        # Effectif par région (légende retirée)
         calc_region["A1"] = "Région"
         calc_region["B1"] = "Effectif"
 
@@ -251,10 +310,12 @@ class OngletDepartement:
         chart3.set_categories(
             Reference(calc_region, min_col=1, min_row=2, max_row=len(regions) + 1)
         )
+        self._set_axes(chart3, "Région", "Effectif")
+        chart3.legend = None
         chart3.height, chart3.width = 10, 16
         ws.add_chart(chart3, "A33")
 
-        # Effectif par classe d'âge
+        # Effectif par classe d'âge (légende conservée)
         calc_age_eff["A1"] = "Classe d'âge"
         calc_age_eff["B1"] = "Effectif"
 
@@ -275,10 +336,12 @@ class OngletDepartement:
         chart4.set_categories(
             Reference(calc_age_eff, min_col=1, min_row=2, max_row=len(ages) + 1)
         )
+        self._set_axes(chart4, "Classe d'âge", "Effectif")
+        chart4.legend = None
         chart4.height, chart4.width = 10, 16
         ws.add_chart(chart4, "K33")
 
-        # Prévalence par classe d'âge (filtré Département + Année)
+        # Prévalence par classe d'âge (filtré Pathologie B5, légende retirée)
         calc_prev_age["A1"] = "Classe d'âge"
         calc_prev_age["B1"] = "Prévalence (%)"
 
@@ -289,10 +352,12 @@ class OngletDepartement:
                     f"=IFERROR(SUMIFS('{self.sheet_eff}'!{col_map['prevalence']}:{col_map['prevalence']},"
                     f"'{self.sheet_eff}'!{col_map['age']}:{col_map['age']},A{i},"
                     f"'{self.sheet_eff}'!{col_map['dept']}:{col_map['dept']},Departement!$B$3,"
-                    f"'{self.sheet_eff}'!{col_map['annee']}:{col_map['annee']},Departement!$B$4)"
+                    f"'{self.sheet_eff}'!{col_map['annee']}:{col_map['annee']},Departement!$B$4,"
+                    f"'{self.sheet_eff}'!{col_map['patho']}:{col_map['patho']},Departement!$B$5)"
                     f"/COUNTIFS('{self.sheet_eff}'!{col_map['age']}:{col_map['age']},A{i},"
                     f"'{self.sheet_eff}'!{col_map['dept']}:{col_map['dept']},Departement!$B$3,"
-                    f"'{self.sheet_eff}'!{col_map['annee']}:{col_map['annee']},Departement!$B$4),0)"
+                    f"'{self.sheet_eff}'!{col_map['annee']}:{col_map['annee']},Departement!$B$4,"
+                    f"'{self.sheet_eff}'!{col_map['patho']}:{col_map['patho']},Departement!$B$5),0)"
                 )
 
         chart5 = self._create_chart("LineChart", "Prévalence par classe d'âge")
@@ -303,10 +368,12 @@ class OngletDepartement:
         chart5.set_categories(
             Reference(calc_prev_age, min_col=1, min_row=2, max_row=len(ages) + 1)
         )
+        self._set_axes(chart5, "Classe d'âge", "Prévalence (%)")
+        chart5.legend = None
         chart5.height, chart5.width = 10, 16
         ws.add_chart(chart5, "A56")
 
-        # Corrélation Population / Effectif (Scatter, 1 série = 1 pathologie)
+        # Corrélation Population / Effectif (légende conservée : 1 série par pathologie)
         if col_map.get("pop_ref"):
             calc_corr = self.wb.create_sheet("CalcCorrelation")
             calc_corr.sheet_state = "hidden"
@@ -336,7 +403,7 @@ class OngletDepartement:
             scatter.style = 13
             scatter.x_axis.title = "Population de référence"
             scatter.y_axis.title = "Effectif"
-            scatter.legend.position = "r" 
+            scatter.legend = None
 
             for i, patho in enumerate(pathos, 2):
                 xref = Reference(calc_corr, min_col=2, min_row=i, max_row=i)
@@ -348,63 +415,72 @@ class OngletDepartement:
 
             scatter.height, scatter.width = 10, 16
             ws.add_chart(scatter, "K56")
-            # --- TABLEAU : Variation annuelle du nombre de patients (J → N) ---
 
-            ROUGE = "FFC00000"
-            thin = Side(style="thin", color="FFBFBFBF")
-            border = Border(left=thin, right=thin, top=thin, bottom=thin)
+        # Tableau : Variation annuelle du nombre de patients (filtré Pathologie B5)
+        ROUGE = "FFC00000"
+        thin = Side(style="thin", color="FFBFBFBF")
+        border = Border(left=thin, right=thin, top=thin, bottom=thin)
 
-            start_row = 3      # ligne 3
-            start_col = 10     # colonne J
+        start_row = 3
+        start_col = 10
 
-            # Titre
-            ws.merge_cells(start_row=start_row, start_column=start_col,
-                        end_row=start_row, end_column=start_col+4)
-            tcell = ws.cell(start_row, start_col, "Variation annuelle du nombre de patients")
-            tcell.fill = PatternFill("solid", fgColor=ROUGE)
-            tcell.font = Font(bold=True, color="FFFFFF")
-            tcell.alignment = Alignment(horizontal="left", vertical="center")
+        ws.merge_cells(start_row=start_row, start_column=start_col,
+                       end_row=start_row, end_column=start_col + 4)
+        tcell = ws.cell(start_row, start_col, "Variation annuelle du nombre de patients")
+        tcell.fill = PatternFill("solid", fgColor=ROUGE)
+        tcell.font = Font(bold=True, color="FFFFFF")
+        tcell.alignment = Alignment(horizontal="left", vertical="center")
 
-            # En-têtes
-            headers = ["Année", "Nb patients", "Nb patients N-1", "Var %"]
-            for i, txt in enumerate(headers):
-                cell = ws.cell(start_row + 1, start_col + i, txt)
-                cell.fill = PatternFill("solid", fgColor=COLOR_BLEU)
-                cell.font = Font(bold=True, color="FFFFFF")
-                cell.alignment = Alignment(horizontal="center", vertical="center")
-                cell.border = border
+        headers = ["Année", "Nb patients", "Nb patients N-1", "Var %"]
+        for i, txt in enumerate(headers):
+            cell = ws.cell(start_row + 1, start_col + i, txt)
+            cell.fill = PatternFill("solid", fgColor=COLOR_BLEU)
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = border
 
-            # --- BOUCLE SUR LES ANNÉES (OBLIGATOIRE) ---
-            annees_asc = sorted(annees)
+        annees_asc = sorted(annees)
+        for k, an in enumerate(annees_asc):
+            r = start_row + 2 + k
 
-            for k, an in enumerate(annees_asc):
-                r = start_row + 2 + k 
+            ws.cell(r, start_col, an).border = border
 
-                # Année (colonne J)
-                ws.cell(r, start_col, an).border = border
+            ws.cell(
+                r, start_col + 1,
+                f"=SUMIFS(cleanedData_Effectifs!G:G,"
+                f"cleanedData_Effectifs!A:A,Departement!J{r},"
+                f"cleanedData_Effectifs!F:F,Departement!$B$3,"
+                f"cleanedData_Effectifs!{col_map['patho']}:{col_map['patho']},Departement!$B$5)"
+            ).number_format = "#,##0"
+            ws.cell(r, start_col + 1).border = border
 
-                # Nb patients N
-                ws.cell(
-                    r, start_col + 1,
-                    f"=SOMME.SI.ENS(cleanedData_Effectifs!G:G;"
-                    f"cleanedData_Effectifs!A:A;Departement!J{r};"
-                    f"cleanedData_Effectifs!F:F;Departement!$B$3)"
-                ).number_format = "#,##0"
-                ws.cell(r, start_col + 1).border = border
+            ws.cell(
+                r, start_col + 2,
+                f"=SUMIFS(cleanedData_Effectifs!G:G,"
+                f"cleanedData_Effectifs!A:A,Departement!J{r}-1,"
+                f"cleanedData_Effectifs!F:F,Departement!$B$3,"
+                f"cleanedData_Effectifs!{col_map['patho']}:{col_map['patho']},Departement!$B$5)"
+            ).number_format = "#,##0"
+            ws.cell(r, start_col + 2).border = border
 
-                # Nb patients N-1
-                ws.cell(
-                    r, start_col + 2,
-                    f"=SOMME.SI.ENS(cleanedData_Effectifs!G:G;"
-                    f"cleanedData_Effectifs!A:A;Departement!J{r}-1;"
-                    f"cleanedData_Effectifs!F:F;Departement!$B$3)"
-                ).number_format = "#,##0"
-                ws.cell(r, start_col + 2).border = border
+            ws.cell(
+                r, start_col + 3,
+                f"=IFERROR((K{r}-L{r})/L{r},\"\")"
+            ).number_format = "0.0%"
+            ws.cell(r, start_col + 3).alignment = Alignment(horizontal="center")
+            ws.cell(r, start_col + 3).border = border
 
-                # Var %
-                ws.cell(
-                    r, start_col + 3,
-                    f"=SIERREUR((K{r}-L{r})/L{r};\"\")"
-                ).number_format = "0.0%"
-                ws.cell(r, start_col + 3).alignment = Alignment(horizontal="center")
-                ws.cell(r, start_col + 3).border = border
+        # Top 10 départements : cancer et diabète
+        patho_vals = df["patho_niv1"].dropna().unique()
+        cancer_labels = [p for p in patho_vals if "cancer" in str(p).lower()]
+        diab_labels = [p for p in patho_vals if "diab" in str(p).lower()]
+
+        self._top10_chart(ws, "CalcTopCancer", cancer_labels, deps, col_map,
+                          "Top 10 départements - Cancer", "A79")
+        self._top10_chart(ws, "CalcTopDiab", diab_labels, deps, col_map,
+                          "Top 10 départements - Diabète", "K79")
+
+        # Largeurs des colonnes 
+        largeurs = {"A": 35, "B": 35, "E": 35, "F": 35, "K": 18, "L": 18, "M": 18}
+        for col, w in largeurs.items():
+            ws.column_dimensions[col].width = w

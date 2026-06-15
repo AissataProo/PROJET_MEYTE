@@ -7,12 +7,11 @@ from config import COULEURS, SHEET_CLEANED_DEPENSES
 
 
 class OngletAnalysesUnifiees:
-    """Génère l’onglet *Analyses* et l’onglet caché *Data_Analyses* :
-    - crée un filtre d’année dynamique ;
-    - calcule les Top 10 pathologies en **effectifs** et en **montants** ;
-    - alimente la feuille cachée avec les données agrégées nécessaires ;
-    - construit deux graphiques en barres basés sur des formules `SUMIFS` dépendant de l’année sélectionnée ;
-    - applique la mise en forme (titres, couleurs, alignements) et insère les graphiques dans l’onglet principal.
+    """Génère l'onglet *Analyses* et l'onglet caché *Data_Analyses* :
+    - filtres Année + Département dynamiques ;
+    - Top 10 pathologies en effectifs (filtré Année + Département)
+      et en montants estimés par département (coût/patient national x effectif local) ;
+    - graphiques en barres pilotés par des formules SUMIFS.
     """
 
     def __init__(self, wb, df_depenses, df_effectifs):
@@ -23,7 +22,7 @@ class OngletAnalysesUnifiees:
         self.couleur_accent = COULEURS["accent"]
 
     def create(self):
-        for nom in ["Analyses", "Data_Analyses"]:
+        for nom in ["Analyses", "Data_Analyses", "Analyses_Listes"]:
             if nom in self.wb.sheetnames:
                 self.wb.remove(self.wb[nom])
 
@@ -40,7 +39,7 @@ class OngletAnalysesUnifiees:
         annees = sorted(dep["annee"].dropna().unique(), reverse=True)
         annee_defaut = int(annees[0]) if annees else 2023
 
-        # --- Titre ---
+        # Titre
         ws.merge_cells("A1:T1")
         ws["A1"] = "Analyses unifiées"
         ws["A1"].font = Font(bold=True, size=16, color="FFFFFF")
@@ -48,7 +47,7 @@ class OngletAnalysesUnifiees:
         ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
         ws.row_dimensions[1].height = 35
 
-        # --- Filtre Année
+        # Filtre Année
         ws["A3"] = "Année"
         ws["A3"].font = Font(bold=True, color="FFFFFF")
         ws["A3"].fill = PatternFill("solid", fgColor=self.couleur_accent)
@@ -63,46 +62,36 @@ class OngletAnalysesUnifiees:
         )
         ws.add_data_validation(dv)
         dv.add("B3")
-        ws.column_dimensions["A"].width = 14
-        ws.column_dimensions["B"].width = 12
-        # --- Filtre Département (dynamique, feuille cachée) ---
 
-        # Liste des départements uniques
-        departements = sorted(self.df_effectifs["Département"].dropna().unique())
+        # Filtre Département (liste dans une feuille cachée)
+        departements = sorted(str(d) for d in self.df_effectifs["Département"].dropna().unique())
+        dept_defaut = departements[0] if departements else ""
 
-        # Feuille cachée pour stocker les listes
         ws_listes = self.wb.create_sheet("Analyses_Listes")
         ws_listes.sheet_state = "hidden"
-
-        # Écrire la liste des départements en colonne A
         for i, d in enumerate(departements, start=1):
             ws_listes.cell(i, 1, d)
 
-        # Label
         ws["A4"] = "Département"
         ws["A4"].font = Font(bold=True, color="FFFFFF")
         ws["A4"].fill = PatternFill("solid", fgColor=self.couleur_accent)
         ws["A4"].alignment = Alignment(horizontal="center")
-
-        # Valeur par défaut = premier département
-        ws["B4"] = departements[0]
+        ws["B4"] = dept_defaut
         ws["B4"].font = Font(bold=True)
         ws["B4"].alignment = Alignment(horizontal="center")
 
-        # Validation dynamique
         dv_dep = DataValidation(
             type="list",
-            formula1=f"'Analyses_Listes'!$A$1:$A${len(departements)}",
+            formula1=f"'Analyses_Listes'!$A$1:$A${max(len(departements), 1)}",
             allow_blank=False,
         )
         ws.add_data_validation(dv_dep)
         dv_dep.add("B4")
 
-        # Largeur colonnes
-        ws.column_dimensions["A"].width = 14
-        ws.column_dimensions["B"].width = 12
+        ws.column_dimensions["A"].width = 16
+        ws.column_dimensions["B"].width = 28
 
-        # Source EFFECTIF
+        # Source EFFECTIF agrégée AVEC le département (sinon pas de filtre possible)
         sexes = set(eff["Sexe"].astype(str).unique())
         base_eff = (
             eff[eff["Sexe"].astype(str) == "ENSEMBLE"] if "ENSEMBLE" in sexes else eff
@@ -112,19 +101,22 @@ class OngletAnalysesUnifiees:
             & ~base_eff["patho_niv1"].astype(str).str.lower().str.contains("total")
         ]
         eff_agg = (
-            base_eff.groupby(["patho_niv1", "annee"], observed=True)["Effectif"]
+            base_eff.groupby(["patho_niv1", "annee", "Département"], observed=True)["Effectif"]
             .sum()
             .reset_index()
         )
+        # H=patho, I=annee, J=departement, K=effectif
         ws_data.cell(1, 8, "patho")
         ws_data.cell(1, 9, "annee")
-        ws_data.cell(1, 10, "effectif")
+        ws_data.cell(1, 10, "departement")
+        ws_data.cell(1, 11, "effectif")
         for i, r in enumerate(eff_agg.itertuples(index=False), start=2):
             ws_data.cell(i, 8, str(r[0]))
             ws_data.cell(i, 9, int(r[1]))
-            ws_data.cell(i, 10, float(r[2]))
+            ws_data.cell(i, 10, str(r[2]))
+            ws_data.cell(i, 11, float(r[3]))
 
-        #  Top 10 pathologies (effectif, annee par défaut)
+        # Top 10 pathologies (effectif) : libellés = top national de l'année par défaut
         top_eff = (
             eff_agg[eff_agg["annee"] == annee_defaut]
             .groupby("patho_niv1", observed=True)["Effectif"]
@@ -134,14 +126,17 @@ class OngletAnalysesUnifiees:
         )
         for i, patho in enumerate(top_eff.index, start=2):
             ws_data.cell(i, 1, str(patho))
-            ws_data.cell(i, 2).value = f"=SUMIFS($J:$J,$H:$H,A{i},$I:$I,Analyses!$B$3)"
+            # SUMIFS filtré Année (B3) ET Département (B4)
+            ws_data.cell(i, 2).value = (
+                f"=SUMIFS($K:$K,$H:$H,A{i},$I:$I,Analyses!$B$3,$J:$J,Analyses!$B$4)"
+            )
             ws_data.cell(i, 2).number_format = "#,##0"
         n_eff = len(top_eff)
 
         chart_eff = BarChart()
         chart_eff.type = "bar"
         chart_eff.style = 11
-        chart_eff.title = "Top 10 Pathologies (Effectifs)"
+        chart_eff.title = "Top 10 Pathologies (Effectifs) - par département"
         chart_eff.height = 16
         chart_eff.width = 20
         chart_eff.legend = None
@@ -160,6 +155,7 @@ class OngletAnalysesUnifiees:
             chart_eff.series[0].graphicalProperties.solidFill = "006B4F"
         ws.add_chart(chart_eff, "A6")
 
+        # Top 10 pathologies (montant) : filtré Année uniquement (dépenses nationales)
         cols = self.df_depenses.columns.tolist()
         l_patho = get_column_letter(cols.index("patho_niv1") + 1)
         l_mont = get_column_letter(cols.index("montant") + 1)
@@ -178,10 +174,13 @@ class OngletAnalysesUnifiees:
         )
         for i, patho in enumerate(top_mont.index, start=2):
             ws_data.cell(i, 4, str(patho))
+            # Montant estimé dept = (montant national / effectif national) * effectif dept
             ws_data.cell(i, 5).value = (
-                f"=SUMIFS('{sd}'!{l_mont}:{l_mont},"
-                f"'{sd}'!{l_patho}:{l_patho},D{i},"
-                f"'{sd}'!{l_annee}:{l_annee},Analyses!$B$3)"
+                f"=IFERROR("
+                f"SUMIFS('{sd}'!{l_mont}:{l_mont},'{sd}'!{l_patho}:{l_patho},D{i},'{sd}'!{l_annee}:{l_annee},Analyses!$B$3)"
+                f"/SUMIFS($K:$K,$H:$H,D{i},$I:$I,Analyses!$B$3)"
+                f"*SUMIFS($K:$K,$H:$H,D{i},$I:$I,Analyses!$B$3,$J:$J,Analyses!$B$4)"
+                f",0)"
             )
             ws_data.cell(i, 5).number_format = "#,##0"
         n_mont = len(top_mont)
@@ -189,7 +188,7 @@ class OngletAnalysesUnifiees:
         chart_mont = BarChart()
         chart_mont.type = "bar"
         chart_mont.style = 11
-        chart_mont.title = "Top 10 Pathologies (Montant)"
+        chart_mont.title = "Top 10 Pathologies (Montant estimé) - par département"
         chart_mont.height = 16
         chart_mont.width = 20
         chart_mont.legend = None
@@ -201,7 +200,7 @@ class OngletAnalysesUnifiees:
             Reference(ws_data, min_col=4, min_row=2, max_row=n_mont + 1)
         )
         chart_mont.x_axis.title = "Pathologie"
-        chart_mont.y_axis.title = "Montant (€)"
+        chart_mont.y_axis.title = "Montant estimé (€)"
         chart_mont.x_axis.delete = False
         chart_mont.y_axis.delete = False
         if chart_mont.series:

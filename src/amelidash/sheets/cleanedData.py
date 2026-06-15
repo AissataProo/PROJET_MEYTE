@@ -11,6 +11,7 @@ def build_cleaned_data_effectifs(wb: Workbook, df: pd.DataFrame) -> None:
 
     ws = wb.create_sheet(SHEET_CLEANED_EFFECTIFS)
     ws.sheet_view.showGridLines = False
+    ws.sheet_state = "hidden"  
     for row in dataframe_to_rows(df, index=False, header=True):
         ws.append(row)
 
@@ -24,5 +25,6 @@ def build_cleaned_data_depenses(wb: Workbook, df: pd.DataFrame) -> None:
     """
     ws = wb.create_sheet(SHEET_CLEANED_DEPENSES)
     ws.sheet_view.showGridLines = False
+    ws.sheet_state = "hidden"          # <-- masquée
     for row in dataframe_to_rows(df, index=False, header=True):
         ws.append(row)
