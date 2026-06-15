@@ -65,6 +65,42 @@ class OngletAnalysesUnifiees:
         dv.add("B3")
         ws.column_dimensions["A"].width = 14
         ws.column_dimensions["B"].width = 12
+        # --- Filtre Département (dynamique, feuille cachée) ---
+
+        # Liste des départements uniques
+        departements = sorted(self.df_effectifs["Département"].dropna().unique())
+
+        # Feuille cachée pour stocker les listes
+        ws_listes = self.wb.create_sheet("Analyses_Listes")
+        ws_listes.sheet_state = "hidden"
+
+        # Écrire la liste des départements en colonne A
+        for i, d in enumerate(departements, start=1):
+            ws_listes.cell(i, 1, d)
+
+        # Label
+        ws["A4"] = "Département"
+        ws["A4"].font = Font(bold=True, color="FFFFFF")
+        ws["A4"].fill = PatternFill("solid", fgColor=self.couleur_accent)
+        ws["A4"].alignment = Alignment(horizontal="center")
+
+        # Valeur par défaut = premier département
+        ws["B4"] = departements[0]
+        ws["B4"].font = Font(bold=True)
+        ws["B4"].alignment = Alignment(horizontal="center")
+
+        # Validation dynamique
+        dv_dep = DataValidation(
+            type="list",
+            formula1=f"'Analyses_Listes'!$A$1:$A${len(departements)}",
+            allow_blank=False,
+        )
+        ws.add_data_validation(dv_dep)
+        dv_dep.add("B4")
+
+        # Largeur colonnes
+        ws.column_dimensions["A"].width = 14
+        ws.column_dimensions["B"].width = 12
 
         # Source EFFECTIF
         sexes = set(eff["Sexe"].astype(str).unique())

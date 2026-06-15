@@ -5,9 +5,9 @@ PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
 RESULT_DIR = PROJECT_ROOT / "result"
 
-# --- Fichiers locaux ---
-DATA_DEPENSES = DATA_DIR / "data_ameli_depenses.csv"
-DATA_EFFECTIFS = DATA_DIR / "data_ameli_effectifs.csv"
+# # --- Fichiers locaux ---
+# DATA_DEPENSES = DATA_DIR / "data_ameli_depenses.csv"
+# DATA_EFFECTIFS = DATA_DIR / "data_ameli_effectifs.csv"
 
 # # --- Fichiers de sortie ---
 # OUTPUT_DEP = RESULT_DIR / "Dashboard_Depenses.xlsx"

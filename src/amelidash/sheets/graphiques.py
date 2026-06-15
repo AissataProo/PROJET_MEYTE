@@ -151,7 +151,6 @@ class OngletGraphiques:
                 }
             )
 
-        # ===================== Listes des filtres =====================
         def _vals(col, exclure=()):
             return sorted(
                 {
@@ -185,7 +184,7 @@ class OngletGraphiques:
         ].replace(0, pd.NA)
         top_dep = dep_def["prev"].dropna().nlargest(15).sort_values().index.tolist()
 
-        # ===================== Feuilles =====================
+        # Feuilles
         ws = self.wb.create_sheet("Graphiques")
         ws.sheet_view.showGridLines = False
         calc = self.wb.create_sheet("Calc")
