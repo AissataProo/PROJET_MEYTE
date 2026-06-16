@@ -1,4 +1,5 @@
 import pandas as pd
+import os
 from openpyxl import Workbook
 from config import OUTPUT_DASHBOARD, SHEET_CLEANED_DEPENSES, SHEET_CLEANED_EFFECTIFS
 from data import get_cleaned_effectifs, get_cleaned_depenses
@@ -120,7 +121,7 @@ def main():
 
         print("   - Analyses unifiees...")
         OngletAnalysesUnifiees(wb, df_depenses, df_eff_reduit).create()
-
+        os.makedirs(os.path.dirname(OUTPUT_DASHBOARD), exist_ok=True)
         wb.save(OUTPUT_DASHBOARD)
 
         print(f"\nSucces - Fichier cree : {OUTPUT_DASHBOARD}")
