@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.9.37">
+<meta name="generator" content="quarto-1.9.38">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -33,10 +33,10 @@ ul.task-list li input[type="checkbox"] {
 <script src="README_files/libs/quarto-html/tippy.umd.min.js"></script>
 <script src="README_files/libs/quarto-html/anchor.min.js"></script>
 <link href="README_files/libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="README_files/libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="README_files/libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="README_files/libs/bootstrap/bootstrap.min.js"></script>
 <link href="README_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="README_files/libs/bootstrap/bootstrap-2e5e2c54490f6b12526ab78721810776.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="README_files/libs/bootstrap/bootstrap-9f4ff6b38b19933b27ecc408b294e4de.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 
 
 </head>
@@ -52,6 +52,81 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="projet_meyte" class="level1">
 <h1>PROJET_MEYTE</h1>
+</section>
+<section id="contexte" class="level1">
+<h1>Contexte</h1>
+<p>L’Assurance Maladie finance une cinquantaine de pathologies <strong>67,4 millions de bénéficiaires</strong> en France et traitements chroniques avec des budgets très disparates. Cependant, un même nombre de patients pris en charge ne coûte pas pareil selon la pathologie : le diabète peut être peu coûteux en moyenne par patient, tandis qu’un cancer coûte beaucoup plus cher. Certaines pathologies consomment une part très importante du budget malgré une faible prévalence, tandis que d’autres concernent un grand nombre de patients tout en générant des coûts faibles.</p>
+</section>
+<section id="dictionnaire-du-jeu-de-données" class="level1">
+<h1>Dictionnaire du jeu de données</h1>
+<p>Le projet s’appuie sur les données de l’Assurance Maladie. Il s’appuie sur deux datasets : Les données proviennent du portail Open Data de l’Assurance Maladie.</p>
+<p><a href="https://data.ameli.fr/explore/dataset/effectifs/information/">Dataset 1 – Effectifs de patients</a></p>
+<p>Ce jeu de données recense les effectifs de patients pris en charge par pathologie selon : - l’année<br>
+- le sexe<br>
+- la classe d’âge<br>
+- la région<br>
+- le département</p>
+<p><a href="https://data.ameli.fr/explore/dataset/depenses/information/">Dataset 2 – Dépenses remboursées</a></p>
+<p>Ce jeu de données recense les dépenses remboursées associées aux pathologies selon :</p>
+<ul>
+<li>les dépenses totales ;</li>
+<li>les dépenses moyennes par patient ;</li>
+<li>les postes de dépenses ;</li>
+</ul>
+<section id="objectif" class="level2">
+<h2 class="anchored" data-anchor-id="objectif">Objectif</h2>
+<p>L’objectif de ce projet est de concevoir un système de reporting automatisé capable mieux comprendre comment les ressources de santé sont consommées selon les pathologies, les territoires et les profils de patients. Il combine deux niveaux d’analyse complémentaires :<br>
+– une vue nationale des dépenses de santé par pathologie (2022–2023), – une vue régionale et départementale des effectifs de patients.</p>
+<p>L’outil développé permet d’identifier les pathologies les plus coûteuses, d’observer les disparités régionales et départementales, et de suivre l’évolution des dépenses dans le temps. L’analyse de ces indicateurs met en évidence les principaux postes de dépenses et les populations les plus concernées.</p>
+<p>Le tableau de bord est généré automatiquement en Python :</p>
+<ul>
+<li>pandas pour le nettoyage et l’agrégation des données (groupby) ;</li>
+<li>openpyxl pour la construction du classeur Excel, des filtres et des graphiques (barres, lignes, secteurs, nuage de points).</li>
+</ul>
+<p>Le classeur produit comporte plusieurs onglets reliés par des filtres dynamiques (listes déroulantes) : une vue nationale (Top pathologies en effectifs et en montants), une vue départementale et une vue régionale (prévalence par âge, par sexe, par territoire ; Top départements touchés). Les feuilles de données sources sont masquées et les indicateurs se recalculent en direct selon les filtres sélectionnés.</p>
+</section>
+<section id="les-formules-que-je-prévois-dutiliser" class="level2">
+<h2 class="anchored" data-anchor-id="les-formules-que-je-prévois-dutiliser">Les formules que je prévois d’utiliser</h2>
+<p>Je prévois d’utiliser plusieurs formules afin de structurer, croiser et analyser les données</p>
+<p>Je prévois d’utiliser :</p>
+<ul>
+<li><strong>Formules d’agrégation :</strong> <code>SOMME()</code>, pour calculer les dépenses totales</li>
+<li><strong>Formules conditionnelles :</strong> <code>NB.SI()</code>, <code>NB.SI.ENS()</code>, <code>SOMME.SI()</code>, <code>SOMME.SI.ENS()</code> pour filtrer et agréger les données selon la pathologie, la région, le sexe ou l’année</li>
+<li><strong>Indicateurs de performance :</strong> calcul du coût moyen par patient, des parts de dépenses par pathologie et des évolutions dans le temps</li>
+<li><strong>Gestion des erreurs et qualité des données :</strong> <code>SI()</code>, <code>SIERREUR()</code> et <code>ARRONDI()</code> pour sécuriser et fiabiliser les calculs</li>
+</ul>
+</section>
+</section>
+<section id="arborescence-du-projet" class="level1">
+<h1>Arborescence du projet :</h1>
+<pre class="text"><code>
+amelidash/
+├── components/             # Briques réutilisables
+│   ├── charts.py           #  construction et mise en formedes graphiques
+│   ├── filters.py          #   filtres / listes déroulantes (validation de données)
+│   └── styles.py           #   couleurs, polices, bordures, mises en forme
+├── sheets/                 # Un module par onglet du classeur
+│   ├── Analyse.py          #   onglet Analyses unifiées (vue nationale)
+│   ├── cleanedData.py      #   feuilles sources nettoyées (effectifs + dépenses), masquées
+│   ├── departement.py      #   onglet Départemental
+│   ├── depenses.py         #   onglet Dépenses
+│   ├── effectifs.py        #   onglet Effectifs
+│   ├── filtersdep.py       #   filtres de l'onglet Dépenses
+│   ├── filterseff.py       #   filtres de l'onglet Effectifs
+│   ├── graphiques.py       #   onglet Graphiques (vue régionale)
+│   └── postes.py           #   onglet Postes de dépense
+├── __init__.py             # Déclaration du package
+├── config.py               # Constantes (noms de feuilles, couleurs)
+├── data.py                 # Chargement et nettoyage des données (pandas)
+├── dashboard.py            # Assemblage du classeur et orchestration des onglets
+└── main.py                 # Point d'entrée : exécute toute la génération
+
+result/
+└── Dashboard_Santé.xlsx    # Classeur Excel généré (sortie finale)</code></pre>
+</section>
+<section id="schema" class="level1">
+<h1>Schema</h1>
+<p>!(<img src="Schema.png" class="img-fluid" alt="alt text">)</p>
 </section>
 
 </main>

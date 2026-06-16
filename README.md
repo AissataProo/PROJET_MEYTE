@@ -30,8 +30,18 @@ L'objectif de ce projet est de concevoir un système de reporting automatisé ca
 – une vue nationale des dépenses de santé par pathologie (2022–2023),
 – une vue régionale et départementale des effectifs de patients.
 
-L’outil développé permet ainsi d’identifier les pathologies les plus coûteuses, d’observer les disparités régionales et départementales, et de suivre l’évolution des dépenses dans le temps. 
-L'analyse de ces indicateurs permet de mettre en évidence les principaux postes de dépenses, les populations les plus concernées,etc...
+L’outil développé permet d’identifier les pathologies les plus coûteuses, d’observer les disparités régionales et départementales, et de suivre l’évolution des dépenses dans le temps.
+L'analyse de ces indicateurs met en évidence les principaux postes de dépenses et les populations les plus concernées.
+
+Le tableau de bord est généré automatiquement en Python :
+
+- pandas pour le nettoyage et l’agrégation des données (groupby) ;
+- openpyxl pour la construction du classeur Excel, des filtres et des graphiques (barres, lignes, secteurs, nuage de points).
+
+Le classeur produit comporte plusieurs onglets reliés par des filtres dynamiques (listes déroulantes) :
+une vue nationale (Top pathologies en effectifs et en montants), une vue départementale et une vue régionale
+(prévalence par âge, par sexe, par territoire ; Top départements touchés). Les feuilles de données sources sont
+masquées et les indicateurs se recalculent en direct selon les filtres sélectionnés.
 
 ## Les formules que je prévois d’utiliser
 
@@ -41,9 +51,37 @@ Je prévois d’utiliser :
 
 * **Formules d’agrégation :** `SOMME()`, pour calculer les dépenses totales
 * **Formules conditionnelles :** `NB.SI()`, `NB.SI.ENS()`, `SOMME.SI()`, `SOMME.SI.ENS()` pour filtrer et agréger les données selon la pathologie, la région, le sexe ou l’année
-* **Analyse dynamique :** `FILTRER()` pour extraire et structurer des sous-ensembles de données selon différents critères (année, pathologie, tranches d'ages, postes de depenses)
 * **Indicateurs de performance :** calcul du coût moyen par patient, des parts de dépenses par pathologie et des évolutions dans le temps
 * **Gestion des erreurs et qualité des données :** `SI()`, `SIERREUR()` et `ARRONDI()` pour sécuriser et fiabiliser les calculs
+
+# Arborescence du projet :
+
+```text
+
+amelidash/
+├── components/             # Briques réutilisables
+│   ├── charts.py           #  construction et mise en formedes graphiques
+│   ├── filters.py          #   filtres / listes déroulantes (validation de données)
+│   └── styles.py           #   couleurs, polices, bordures, mises en forme
+├── sheets/                 # Un module par onglet du classeur
+│   ├── Analyse.py          #   onglet Analyses unifiées (vue nationale)
+│   ├── cleanedData.py      #   feuilles sources nettoyées (effectifs + dépenses), masquées
+│   ├── departement.py      #   onglet Départemental
+│   ├── depenses.py         #   onglet Dépenses
+│   ├── effectifs.py        #   onglet Effectifs
+│   ├── filtersdep.py       #   filtres de l'onglet Dépenses
+│   ├── filterseff.py       #   filtres de l'onglet Effectifs
+│   ├── graphiques.py       #   onglet Graphiques (vue régionale)
+│   └── postes.py           #   onglet Postes de dépense
+├── __init__.py             # Déclaration du package
+├── config.py               # Constantes (noms de feuilles, couleurs)
+├── data.py                 # Chargement et nettoyage des données (pandas)
+├── dashboard.py            # Assemblage du classeur et orchestration des onglets
+└── main.py                 # Point d'entrée : exécute toute la génération
+
+result/
+└── Dashboard_Santé.xlsx    # Classeur Excel généré (sortie finale)
+```
 
 # Schema 
 !(![alt text](Schema.png))
